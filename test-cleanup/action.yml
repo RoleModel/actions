@@ -1,0 +1,27 @@
+name: "Test Cleanup"
+
+inputs:
+  artifact-prefix:
+    type: string
+    required: true
+
+runs:
+  using: composite
+  steps:
+  - name: Upload logs
+    if: ${{ always() }}
+    uses: actions/upload-artifact@v4
+    with:
+      name: ${{ inputs.artifact-prefix }}-logs
+      path: log
+
+  - name: Capture System Info
+    if: ${{ always() }}
+    shell: bash
+    run: |
+      echo "*****"
+      echo "System Info"
+      uname -a
+      echo "-----"
+      env | sort
+      echo "*****"

@@ -1,0 +1,41 @@
+name: 'Test Runtime Analyzer'
+description: 'Analyzes test runtimes and shows the slowest tests'
+inputs:
+  test-output-path:
+    description: 'Path to the test output file'
+    required: true
+  top-count:
+    description: 'Number of slowest tests to show'
+    required: false
+    default: '10'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Analyze test runtimes
+      shell: bash
+      run: |
+        awk -F':' -v top_count="${{ inputs.top-count }}" '
+          /:/ {
+            runtime = $2 + 0
+            if (runtime > 0) {
+              file = $1
+              times[file] = runtime
+            }
+          }
+          END {
+            printf "## Longest Running Tests\n"
+            printf "| Test File | Runtime (seconds) |\n"
+            printf "|-----------|-------------------|\n"
+            n = asorti(times, sorted, "@val_num_desc")
+            for (i = 1; i <= top_count && i <= n; i++) {
+              file = sorted[i]
+              printf "| %s | %.2f |\n", file, times[file]
+            }
+          }
+        ' "${{ inputs.test-output-path }}" >> $GITHUB_STEP_SUMMARY
+        # Verify the summary was written
+        if ! grep -q "Longest Running Tests" "$GITHUB_STEP_SUMMARY"; then
+          echo "No test results were found to analyze"
+          exit 1
+        fi
