@@ -1,0 +1,85 @@
+name: 'Linting & Ruby Non-System Tests'
+description: 'Runs linting and non-system Ruby tests'
+
+inputs:
+  linting_step_required:
+    description: 'Whether linting is required'
+    type: boolean
+    required: false
+    default: false
+  linting_step_command:
+    description: 'Command for linting (e.g., "bundle exec rubocop")'
+    type: string
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Enable Corepack
+      shell: bash
+      run: corepack enable
+
+    - name: Set up node
+      uses: useblacksmith/setup-node@v5
+      with:
+        node-version-file: .node-version
+        cache: yarn
+
+    - name: Run Yarn Install
+      shell: bash
+      run: yarn install --frozen-lockfile
+
+    - name: Install Ruby and gems
+      uses: useblacksmith/setup-ruby@v2
+      with:
+        bundler-cache: true
+
+    - name: Retrieve Cached Rails Assets
+      id: cache-assets
+      uses: useblacksmith/cache/restore@v5
+      with:
+        path: |
+          public/assets
+          app/assets/builds
+        key: ${{ inputs.runner-os }}-rails-assets-${{ hashFiles('app/assets/images/**/*', 'app/assets/stylesheets/**/*', 'app/javascript/**/*', 'yarn.lock', 'Gemfile.lock') }}
+        fail-on-cache-miss: true
+
+    - name: Load previous turbo test runtime stats
+      id: restore-parallel-spec
+      uses: useblacksmith/cache@v5
+      with:
+        path: tmp/turbo_rspec_runtime.log
+        key: ${{ inputs.runner-os }}-parallel-spec-non-system-runtimes-${{ github.sha }}_${{ github.run_attempt }}
+        restore-keys: ${{ inputs.runner-os }}-parallel-spec-no-system-runtimes-
+
+    - name: Setup parallel databases
+      shell: bash
+      run: bundle exec rake parallel:create parallel:load_schema
+
+    - name: Rspec tests
+      shell: bash
+      run: bundle exec parallel_rspec --verbose-command --exclude-pattern "/system/"
+
+    - name: Linting
+      if: ${{ inputs.linting_step_required }}
+      shell: bash
+      run: ${{ inputs.linting_step_command }}
+
+    - name: Publish Test Results
+      uses: mikepenz/action-junit-report@v4
+      if: success() || failure()
+      with:
+        check_name: Test Results
+        report_paths: tmp/rspec-*.xml
+        detailed_summary: true
+
+    - name: Analyze test runtimes
+      uses: RoleModel/actions/test-runtime-analyzer@v1
+      with:
+        test-output-path: tmp/turbo_rspec_runtime.log
+
+    - name: Cleanup
+      uses: RoleModel/actions/test-cleanup@v1
+      with:
+        artifact-prefix: rspec

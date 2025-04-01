@@ -1,0 +1,20 @@
+name: 'Check Assets'
+description: 'Checks if assets are already compiled'
+
+outputs:
+  cache-hit:
+    description: 'Whether the cache was hit'
+    value: ${{ steps.check-asset-cache.outputs.cache-hit }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Check if assets are already compiled
+      id: check-asset-cache
+      uses: useblacksmith/cache/restore@v5
+      with:
+        path: |
+          public/assets
+          app/assets/builds
+        key: ${{ inputs.runner-os }}-rails-assets-${{ hashFiles('app/assets/images/**/*', 'app/assets/stylesheets/**/*', 'app/javascript/**/*', 'yarn.lock', 'Gemfile.lock') }}
+        lookup-only: true

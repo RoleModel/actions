@@ -1,0 +1,37 @@
+name: 'Compile Assets'
+description: 'Compiles Rails assets if not cached'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Enable Corepack
+      shell: bash
+      run: corepack enable
+
+    - name: Set up node
+      uses: useblacksmith/setup-node@v5
+      with:
+        node-version-file: .node-version
+        cache: yarn
+
+    - name: Run Yarn Install
+      shell: bash
+      run: yarn install --frozen-lockfile
+
+    - name: Install Ruby and gems
+      uses: useblacksmith/setup-ruby@v2
+      with:
+        bundler-cache: true
+
+    - name: Build assets
+      shell: bash
+      run: bundle exec rake assets:precompile
+
+    - name: Cache Rails Precompiled Assets
+      id: cache-assets
+      uses: useblacksmith/cache/save@v5
+      with:
+        path: |
+          public/assets
+          app/assets/builds
+        key: ${{ inputs.runner-os }}-rails-assets-${{ hashFiles('app/assets/images/**/*', 'app/assets/stylesheets/**/*', 'app/javascript/**/*', 'yarn.lock', 'Gemfile.lock') }}
