@@ -8,11 +8,13 @@ inputs:
     required: false
     default: 'app/assets/images/**/* app/assets/stylesheets/**/* app/javascript/**/* yarn.lock Gemfile.lock'
 
-check_and_compile_assets:
-  name: Check and Compile Assets
+outputs:
+  cache-hit:
+    description: 'Whether the cache was hit'
+    value: ${{ steps.check-asset-cache.outputs.cache-hit }}
+
+runs:
   using: "composite"
-  outputs:
-    cache_hit: ${{ steps.check-asset-cache.outputs.cache-hit }}
   steps:
     - name: Checkout code
       uses: actions/checkout@v4
