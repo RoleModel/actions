@@ -28,6 +28,7 @@ runs:
 
     - name: Enable corepack
       if: steps.check-asset-cache.outputs.cache-hit != 'true'
+      shell: bash
       run: corepack enable
 
     - name: Set up node
@@ -45,6 +46,7 @@ runs:
 
     - name: Build assets
       if: steps.check-asset-cache.outputs.cache-hit != 'true'
+      shell: bash
       run: |
         yarn install --immutable
         yarn build
