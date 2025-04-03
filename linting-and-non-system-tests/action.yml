@@ -42,7 +42,7 @@ runs:
         path: |
           public/assets
           app/assets/builds
-        key: ${{ inputs.runner-os }}-rails-assets-${{ hashFiles('app/assets/images/**/*', 'app/assets/stylesheets/**/*', 'app/javascript/**/*', 'yarn.lock', 'Gemfile.lock') }}
+        key: rails-assets-${{ hashFiles('app/assets/images/**/*', 'app/assets/stylesheets/**/*', 'app/javascript/**/*', 'yarn.lock', 'Gemfile.lock') }}
         fail-on-cache-miss: true
 
     - name: Load previous turbo test runtime stats
@@ -50,8 +50,8 @@ runs:
       uses: useblacksmith/cache@v5
       with:
         path: tmp/turbo_rspec_runtime.log
-        key: ${{ inputs.runner-os }}-parallel-spec-non-system-runtimes-${{ github.sha }}_${{ github.run_attempt }}
-        restore-keys: ${{ inputs.runner-os }}-parallel-spec-no-system-runtimes-
+        key: parallel-spec-non-system-runtimes-${{ github.sha }}_${{ github.run_attempt }}
+        restore-keys: parallel-spec-no-system-runtimes-
 
     - name: Setup parallel databases
       shell: bash
