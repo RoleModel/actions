@@ -10,10 +10,9 @@ inputs:
 
 check_and_compile_assets:
   name: Check and Compile Assets
-  runs-on: ubuntu-latest
+  using: "composite"
   outputs:
     cache_hit: ${{ steps.check-asset-cache.outputs.cache-hit }}
-  timeout-minutes: 7
   steps:
     - name: Checkout code
       uses: actions/checkout@v4
