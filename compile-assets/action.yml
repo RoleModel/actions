@@ -1,13 +1,6 @@
 name: 'Compile Assets'
 description: 'Compiles Rails assets if not cached'
 
-inputs:
-  asset_cache_key_files:
-    description: 'Files for Rails assets cache key'
-    type: string
-    required: false
-    default: 'app/assets/images/**/* app/assets/stylesheets/**/* app/javascript/**/* yarn.lock Gemfile.lock'
-
 outputs:
   cache-hit:
     description: 'Whether the cache was hit'
@@ -23,7 +16,7 @@ runs:
         path: |
           public/assets
           app/assets/builds
-        key: rails-assets-${{ hashFiles(inputs.asset_cache_key_files) }}
+        key: rails-assets-${{ hashFiles('app/assets/images/**/*', 'app/assets/stylesheets/**/*', 'app/javascript/**/*', 'yarn.lock', 'Gemfile.lock') }}
         lookup-only: true
 
     - name: Enable corepack
@@ -59,4 +52,4 @@ runs:
         path: |
           public/assets
           app/assets/builds
-        key: rails-assets-${{ hashFiles(inputs.asset_cache_key_files) }}
+        key: rails-assets-${{ hashFiles('app/assets/images/**/*', 'app/assets/stylesheets/**/*', 'app/javascript/**/*', 'yarn.lock', 'Gemfile.lock') }}
