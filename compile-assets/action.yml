@@ -1,37 +1,64 @@
 name: 'Compile Assets'
 description: 'Compiles Rails assets if not cached'
 
-runs:
-  using: "composite"
+inputs:
+  asset_cache_key_files:
+    description: 'Files for Rails assets cache key'
+    type: string
+    required: false
+    default: 'app/assets/images/**/* app/assets/stylesheets/**/* app/javascript/**/* yarn.lock Gemfile.lock'
+
+check_and_compile_assets:
+  name: Check and Compile Assets
+  runs-on: ubuntu-latest
+  outputs:
+    cache_hit: ${{ steps.check-asset-cache.outputs.cache-hit }}
+  timeout-minutes: 7
   steps:
-    - name: Enable Corepack
-      shell: bash
-      run: corepack enable
-
-    - name: Set up node
-      uses: useblacksmith/setup-node@v5
+    - name: Checkout code
+      uses: actions/checkout@v4
       with:
-        node-version-file: .node-version
-        cache: yarn
+        ref: ${{ github.event.pull_request.head.sha }}
 
-    - name: Run Yarn Install
-      shell: bash
-      run: yarn install --frozen-lockfile
-
-    - name: Install Ruby and gems
-      uses: useblacksmith/setup-ruby@v2
-      with:
-        bundler-cache: true
-
-    - name: Build assets
-      shell: bash
-      run: bundle exec rake assets:precompile
-
-    - name: Cache Rails Precompiled Assets
-      id: cache-assets
-      uses: useblacksmith/cache/save@v5
+    - name: Check if assets are already compiled
+      id: check-asset-cache
+      uses: actions/cache/restore@v4
       with:
         path: |
           public/assets
           app/assets/builds
-        key: ${{ inputs.runner-os }}-rails-assets-${{ hashFiles('app/assets/images/**/*', 'app/assets/stylesheets/**/*', 'app/javascript/**/*', 'yarn.lock', 'Gemfile.lock') }}
+        key: rails-assets-${{ hashFiles(inputs.asset_cache_key_files) }}
+        lookup-only: true
+
+    - name: Enable corepack
+      if: steps.check-asset-cache.outputs.cache-hit != 'true'
+      run: corepack enable
+
+    - name: Set up node
+      if: steps.check-asset-cache.outputs.cache-hit != 'true'
+      uses: actions/setup-node@v4
+      with:
+        node-version-file: .node-version
+        cache: yarn
+
+    - name: Install Ruby and gems
+      if: steps.check-asset-cache.outputs.cache-hit != 'true'
+      uses: ruby/setup-ruby@v1
+      with:
+        bundler-cache: true
+
+    - name: Build assets
+      if: steps.check-asset-cache.outputs.cache-hit != 'true'
+      run: |
+        yarn install --immutable
+        yarn build
+
+    - name: Cache Rails Precompiled Assets
+      if: steps.check-asset-cache.outputs.cache-hit != 'true'
+      id: lookup-cached-assets
+      uses: actions/cache/save@v4
+      with:
+        path: |
+          public/assets
+          app/assets/builds
+        key: rails-assets-${{ hashFiles(inputs.asset_cache_key_files) }}
