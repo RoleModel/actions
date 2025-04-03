@@ -16,11 +16,6 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        ref: ${{ github.event.pull_request.head.sha }}
-
     - name: Check if assets are already compiled
       id: check-asset-cache
       uses: actions/cache/restore@v4
