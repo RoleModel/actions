@@ -48,7 +48,7 @@ on:
     branches: ["master"]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}-${{ github.event.ref }}
   cancel-in-progress: true
 
 jobs:
