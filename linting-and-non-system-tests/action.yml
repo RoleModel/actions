@@ -59,7 +59,7 @@ runs:
 
     - name: Rspec tests
       shell: bash
-      run: bundle exec parallel_rspec --verbose-command --exclude-pattern "/system/"
+      run: bundle exec parallel_rspec --verbose --exclude-pattern "/system/"
 
     - name: Linting
       if: ${{ inputs.linting_step_required }}
