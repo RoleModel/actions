@@ -28,7 +28,7 @@ runs:
 
     - name: Run Yarn Install
       shell: bash
-      run: yarn install --frozen-lockfile
+      run: yarn install --immutable
 
     - name: Install Ruby and gems
       uses: useblacksmith/setup-ruby@v2
