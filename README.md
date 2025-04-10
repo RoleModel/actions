@@ -30,6 +30,110 @@ Example:
   with:
     test-output-path: tmp/turbo_rspec_runtime.log
 ```
+## Shared workflow actions
+This is a combination of three composite actions that can be used to run your entire CI flow for a rails app using parallel_tests. Each action allow you to customize the machine, environment variables, and any custom install steps that are needed. It does require you to check out the code yourself, since some install steps might happen after that.
+
+The only inputs are for the linting and non system test action. Neither are required:
+- `linting-step-required`: Boolean (default is false). Only needed if you have a linting command
+- `linting-step-command`: String, `bundle exec rubocop --fail-level warning --display-only-fail-level-offenses --format github`
+
+Here's what your `ci.yml` file could look like
+
+```yaml
+name: "CI"
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  compile_assets:
+    name: Compile assets
+    runs-on: blacksmith-4vcpu-ubuntu-2204
+    timeout-minutes: 5
+    outputs:
+      cache-hit: ${{ steps.check-asset-cache.outputs.cache-hit }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - uses: RoleModel/actions/compile-assets@composite-workflow-steps
+        id: check-asset-cache
+
+  non-system-test:
+    name: Linting & Ruby Non-System Tests
+    runs-on: blacksmith-8vcpu-ubuntu-2204
+    timeout-minutes: 5
+    needs: compile_assets
+    if: always() && (needs.compile_assets.outputs.cache-hit == 'true' || (needs.compile_assets.result == 'success'))
+
+    env:
+      CI: true
+      RAILS_ENV: test
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: password
+      HONEYBADGER_SOURCE_MAP_DISABLED: true
+
+    services:
+      postgres:
+        image: postgres:16
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_USER: root
+          POSTGRES_PASSWORD: password
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run shared flow
+        uses: RoleModel/actions/linting-and-non-system-tests@composite-workflow-steps
+        with:
+          linting_step_required: true
+          linting_step_command: bundle exec rubocop --fail-level warning --display-only-fail-level-offenses --format github
+
+  system-test:
+    name: Ruby System Tests
+    runs-on: blacksmith-16vcpu-ubuntu-2204
+    timeout-minutes: 10
+    if: always() && (needs.compile_assets.outputs.cache-hit == 'true' || (needs.compile_assets.result == 'success'))
+    needs: compile_assets
+    env:
+      CI: true
+      RAILS_ENV: test
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: password
+
+    services:
+      postgres:
+        image: postgres:16
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_USER: root
+          POSTGRES_PASSWORD: password
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # allows for custom install steps if needed
+      - name: Setup vips
+        run: |
+            sudo apt-get update
+            sudo apt-get install -y libvips
+
+      - name: Run shared flow
+        uses: RoleModel/actions/system-tests@composite-workflow-steps
+```
+
+
 
 ## Versioning
 This is using [anothrNick/github-tag-action](https://github.com/anothrNick/github-tag-action/tree/master) to automatically
