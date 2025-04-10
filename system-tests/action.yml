@@ -37,6 +37,13 @@ runs:
         key: rails-assets-${{ hashFiles('app/assets/images/**/*', 'app/assets/stylesheets/**/*', 'app/javascript/**/*', 'yarn.lock', 'Gemfile.lock') }}
         fail-on-cache-miss: true
 
+    # Technically the cache fail-on-cache-miss above should fail this flow...but it doesn't.
+    # This manually fails the workflow if the cache is not found.
+    - name: Fail if cache miss
+      if: steps.cache-assets.outputs.cache-hit != 'true'
+      shell: bash
+      run: exit 1
+
     - name: Load previous turbo test runtime stats
       id: restore-parallel-spec
       uses: useblacksmith/cache@v5
