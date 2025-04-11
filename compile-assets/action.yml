@@ -1,0 +1,55 @@
+name: 'Compile Assets'
+description: 'Compiles Rails assets if not cached'
+
+outputs:
+  cache-hit:
+    description: 'Whether the cache was hit'
+    value: ${{ steps.check-asset-cache.outputs.cache-hit }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Check if assets are already compiled
+      id: check-asset-cache
+      uses: useblacksmith/cache/restore@v5
+      with:
+        path: |
+          public/assets
+          app/assets/builds
+        key: rails-assets-${{ hashFiles('app/assets/images/**/*', 'app/assets/stylesheets/**/*', 'app/javascript/**/*', 'yarn.lock', 'Gemfile.lock') }}
+        lookup-only: true
+
+    - name: Enable corepack
+      if: steps.check-asset-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: corepack enable
+
+    - name: Set up node
+      if: steps.check-asset-cache.outputs.cache-hit != 'true'
+      uses: useblacksmith/setup-node@v5
+      with:
+        node-version-file: .node-version
+        cache: yarn
+
+    - name: Install Ruby and gems
+      if: steps.check-asset-cache.outputs.cache-hit != 'true'
+      uses: ruby/setup-ruby@v1
+      with:
+        bundler-cache: true
+
+    - name: Build assets
+      if: steps.check-asset-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        yarn install --immutable
+        bundle exec rails assets:precompile
+
+    - name: Cache Rails Precompiled Assets
+      if: steps.check-asset-cache.outputs.cache-hit != 'true'
+      id: lookup-cached-assets
+      uses: useblacksmith/cache/save@v5
+      with:
+        path: |
+          public/assets
+          app/assets/builds
+        key: rails-assets-${{ hashFiles('app/assets/images/**/*', 'app/assets/stylesheets/**/*', 'app/javascript/**/*', 'yarn.lock', 'Gemfile.lock') }}
