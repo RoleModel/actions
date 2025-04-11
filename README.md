@@ -46,6 +46,10 @@ on:
     branches: ["master"]
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}-${{ github.event.ref }}
+  cancel-in-progress: true
+
 env:
   CI: true
   RAILS_ENV: test
@@ -53,10 +57,6 @@ env:
   POSTGRES_USER: postgres
   POSTGRES_PASSWORD: password
   SECRET_KEY_BASE: 0cb2b4ae6543f334e0eb5bc88bdabc24c9e5155ecb02a175c6f073a5a0d45a45f4a5b7d1288d3b412307bdfa19be441e97960ec4cd344f91f2d06a2595fb239c
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}-${{ github.event.ref }}
-  cancel-in-progress: true
 
 jobs:
   compile_assets:
@@ -69,7 +69,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - uses: RoleModel/actions/compile-assets@composite-workflow-steps
+      - uses: RoleModel/actions/compile-assets@v2
         id: check-asset-cache
 
   non-system-test:
@@ -92,7 +92,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run shared flow
-        uses: RoleModel/actions/linting-and-non-system-tests@composite-workflow-steps
+        uses: RoleModel/actions/linting-and-non-system-tests@v2
         with:
           linting_step_required: true
           linting_step_command: bundle exec rubocop --fail-level warning --display-only-fail-level-offenses --format github
@@ -123,7 +123,7 @@ jobs:
             sudo apt-get install -y libvips
 
       - name: Run shared flow
-        uses: RoleModel/actions/system-tests@composite-workflow-steps
+        uses: RoleModel/actions/system-tests@v2
 ```
 
 ## Versioning
