@@ -45,7 +45,14 @@ on:
   push:
     branches: ["master"]
   pull_request:
-    branches: ["master"]
+
+env:
+  CI: true
+  RAILS_ENV: test
+  HONEYBADGER_SOURCE_MAP_DISABLED: 'true'
+  POSTGRES_USER: postgres
+  POSTGRES_PASSWORD: password
+  SECRET_KEY_BASE: 0cb2b4ae6543f334e0eb5bc88bdabc24c9e5155ecb02a175c6f073a5a0d45a45f4a5b7d1288d3b412307bdfa19be441e97960ec4cd344f91f2d06a2595fb239c
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}-${{ github.event.ref }}
@@ -71,14 +78,6 @@ jobs:
     timeout-minutes: 5
     needs: compile_assets
     if: always() && (needs.compile_assets.outputs.cache-hit == 'true' || (needs.compile_assets.result == 'success'))
-
-    env:
-      CI: true
-      RAILS_ENV: test
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: password
-      HONEYBADGER_SOURCE_MAP_DISABLED: true
-
     services:
       postgres:
         image: postgres:16
@@ -104,12 +103,6 @@ jobs:
     timeout-minutes: 10
     if: always() && (needs.compile_assets.outputs.cache-hit == 'true' || (needs.compile_assets.result == 'success'))
     needs: compile_assets
-    env:
-      CI: true
-      RAILS_ENV: test
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: password
-
     services:
       postgres:
         image: postgres:16
@@ -132,8 +125,6 @@ jobs:
       - name: Run shared flow
         uses: RoleModel/actions/system-tests@composite-workflow-steps
 ```
-
-
 
 ## Versioning
 This is using [anothrNick/github-tag-action](https://github.com/anothrNick/github-tag-action/tree/master) to automatically

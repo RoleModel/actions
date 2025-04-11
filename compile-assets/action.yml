@@ -42,7 +42,7 @@ runs:
       shell: bash
       run: |
         yarn install --immutable
-        yarn build
+        bundle exec rails assets:precompile
 
     - name: Cache Rails Precompiled Assets
       if: steps.check-asset-cache.outputs.cache-hit != 'true'
