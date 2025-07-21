@@ -51,7 +51,7 @@ runs:
       with:
         path: tmp/turbo_rspec_runtime.log
         key: parallel-spec-non-system-runtimes-${{ github.sha }}_${{ github.run_attempt }}
-        restore-keys: parallel-spec-no-system-runtimes-
+        restore-keys: parallel-spec-non-system-runtimes-
 
     - name: Setup parallel databases
       shell: bash
