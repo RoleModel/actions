@@ -37,7 +37,7 @@ runs:
 
     - name: Retrieve Cached Rails Assets
       id: cache-assets
-      uses: useblacksmith/cache/restore@v5
+      uses: actions/cache/restore@v4
       with:
         path: |
           public/assets
@@ -47,7 +47,7 @@ runs:
 
     - name: Load previous turbo test runtime stats
       id: restore-parallel-spec
-      uses: useblacksmith/cache@v5
+      uses: actions/cache/restore@v4
       with:
         path: tmp/turbo_rspec_runtime.log
         key: parallel-spec-non-system-runtimes-${{ github.sha }}_${{ github.run_attempt }}

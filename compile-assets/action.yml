@@ -11,7 +11,7 @@ runs:
   steps:
     - name: Check if assets are already compiled
       id: check-asset-cache
-      uses: useblacksmith/cache/restore@v5
+      uses: actions/cache/restore@v4
       with:
         path: |
           public/assets
@@ -47,7 +47,7 @@ runs:
     - name: Cache Rails Precompiled Assets
       if: steps.check-asset-cache.outputs.cache-hit != 'true'
       id: lookup-cached-assets
-      uses: useblacksmith/cache/save@v5
+      uses: actions/cache/save@v4
       with:
         path: |
           public/assets
