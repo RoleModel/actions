@@ -13,7 +13,7 @@ runs:
       run: corepack enable
 
     - name: Set up node
-      uses: useblacksmith/setup-node@v5
+      uses: actions/setup-node@v4
       with:
         node-version-file: .node-version
         cache: yarn
@@ -23,13 +23,13 @@ runs:
       run: yarn install --immutable
 
     - name: Install Ruby and gems
-      uses: useblacksmith/setup-ruby@v2
+      uses: ruby/setup-ruby@v1
       with:
         bundler-cache: true
 
     - name: Retrieve Cached Rails Assets
       id: cache-assets
-      uses: useblacksmith/cache/restore@v5
+      uses: actions/cache/restore@v4
       with:
         path: |
           public/assets
@@ -46,7 +46,7 @@ runs:
 
     - name: Load previous turbo test runtime stats
       id: restore-parallel-spec
-      uses: useblacksmith/cache@v5
+      uses: actions/cache/restore@v4
       with:
         path: tmp/turbo_rspec_runtime.log
         key: parallel-spec-system-runtimes-${{ github.sha }}_${{ github.run_attempt }}
