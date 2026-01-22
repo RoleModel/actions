@@ -1,10 +1,10 @@
-name: 'Ruby System Tests'
-description: 'Runs Ruby system tests'
+name: Ruby System Tests
+description: Runs Ruby system tests
 inputs:
   failure-screenshot-dir:
-    description: 'tmp directory where your tests save failure screenshots to'
+    description: tmp directory where your tests save failure screenshots to
     required: false
-    default: 'tmp/capybara'
+    default: tmp/capybara
 
 runs:
   using: "composite"
