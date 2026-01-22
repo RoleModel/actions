@@ -1,5 +1,10 @@
 name: 'Ruby System Tests'
 description: 'Runs Ruby system tests'
+inputs:
+  failure-screenshot-dir:
+    description: 'tmp directory where your tests save failure screenshots to'
+    required: false
+    default: 'tmp/capybara'
 
 runs:
   using: "composite"
@@ -81,9 +86,7 @@ runs:
       uses: actions/upload-artifact@v4
       with:
         name: rspec-screenshots
-        path: ${{ env.FAILURE_SCREENSHOTS_PATH }}
-      env:
-        FAILURE_SCREENSHOTS_PATH: tmp/capybara
+        path: ${{ inputs.failure-screenshot-dir }}
 
     - name: Cleanup
       uses: RoleModel/actions/test-cleanup@v1
