@@ -81,7 +81,9 @@ runs:
       uses: actions/upload-artifact@v4
       with:
         name: rspec-screenshots
-        path: tmp/capybara
+        path: ${{ env.FAILURE_SCREENSHOTS_PATH }}
+      env:
+        FAILURE_SCREENSHOTS_PATH: tmp/capybara
 
     - name: Cleanup
       uses: RoleModel/actions/test-cleanup@v1
