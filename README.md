@@ -40,10 +40,10 @@ The only inputs are for the linting and non system test action. Neither are requ
 Here's what your `ci.yml` file could look like
 
 ```yaml
-name: "CI"
+name: CI
 on:
   push:
-    branches: ["master"]
+    branches: [ main, master ]
   pull_request:
 
 concurrency:
@@ -53,7 +53,7 @@ concurrency:
 env:
   CI: true
   RAILS_ENV: test
-  HONEYBADGER_SOURCE_MAP_DISABLED: 'true'
+  HONEYBADGER_SOURCE_MAP_DISABLED: true
   POSTGRES_USER: postgres
   POSTGRES_PASSWORD: password
   SECRET_KEY_BASE: 0cb2b4ae6543f334e0eb5bc88bdabc24c9e5155ecb02a175c6f073a5a0d45a45f4a5b7d1288d3b412307bdfa19be441e97960ec4cd344f91f2d06a2595fb239c
@@ -77,14 +77,13 @@ jobs:
     runs-on: blacksmith-8vcpu-ubuntu-2204
     timeout-minutes: 5
     needs: compile_assets
-    if: always() && (needs.compile_assets.outputs.cache-hit == 'true' || (needs.compile_assets.result == 'success'))
     services:
       postgres:
         image: postgres:16
         ports:
           - "5432:5432"
         env:
-          POSTGRES_USER: root
+          POSTGRES_USER: postgres
           POSTGRES_PASSWORD: password
 
     steps:
@@ -101,7 +100,6 @@ jobs:
     name: Ruby System Tests
     runs-on: blacksmith-16vcpu-ubuntu-2204
     timeout-minutes: 10
-    if: always() && (needs.compile_assets.outputs.cache-hit == 'true' || (needs.compile_assets.result == 'success'))
     needs: compile_assets
     services:
       postgres:
@@ -109,21 +107,25 @@ jobs:
         ports:
           - "5432:5432"
         env:
-          POSTGRES_USER: root
+          POSTGRES_USER: postgres
           POSTGRES_PASSWORD: password
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # allows for custom install steps if needed
+      # allows for custom install steps between checkout & test run if needed
       - name: Setup vips
         run: |
-            sudo apt-get update
-            sudo apt-get install -y libvips
+          sudo apt-get update
+          sudo apt-get install -y libvips
 
       - name: Run shared flow
         uses: RoleModel/actions/system-tests@v2
+        # if you've configured capybara to be compatible with the tmp:clear task
+        # you can tell the system-tests action like this:
+        with:
+          failure-screenshot-dir: tmp/screenshots
 ```
 
 ## Versioning
