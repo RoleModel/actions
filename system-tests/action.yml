@@ -6,6 +6,10 @@ inputs:
     required: false
     default: tmp/capybara
 
+permissions:
+  # required by mikepenz/action-junit-report@v4
+  checks: write
+
 runs:
   using: "composite"
   steps:
