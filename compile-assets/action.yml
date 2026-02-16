@@ -1,17 +1,17 @@
-name: 'Compile Assets'
-description: 'Compiles Rails assets if not cached'
+name: Compile Assets
+description: Compiles Rails assets if not cached
 
 outputs:
   cache-hit:
-    description: 'Whether the cache was hit'
+    description: Whether the cache was hit
     value: ${{ steps.check-asset-cache.outputs.cache-hit }}
 
 runs:
-  using: "composite"
+  using: composite
   steps:
-    - name: Check if assets are already compiled
+    - name: Check for Existing Precompiled Assets
       id: check-asset-cache
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v5
       with:
         path: |
           public/assets
@@ -19,35 +19,35 @@ runs:
         key: rails-assets-${{ hashFiles('app/assets/images/**/*', 'app/assets/stylesheets/**/*', 'app/javascript/**/*', 'yarn.lock', 'Gemfile.lock') }}
         lookup-only: true
 
-    - name: Enable corepack
-      if: steps.check-asset-cache.outputs.cache-hit != 'true'
+    - name: Enable Corepack
+      if: ${{ steps.check-asset-cache.outputs.cache-hit != 'true' }}
       shell: bash
       run: corepack enable
 
-    - name: Set up node
-      if: steps.check-asset-cache.outputs.cache-hit != 'true'
-      uses: actions/setup-node@v4
+    - name: Setup Node
+      if: ${{ steps.check-asset-cache.outputs.cache-hit != 'true' }}
+      uses: actions/setup-node@v6
       with:
         node-version-file: .node-version
         cache: yarn
 
-    - name: Install Ruby and gems
-      if: steps.check-asset-cache.outputs.cache-hit != 'true'
+    - name: Install Ruby and Gems
+      if: ${{ steps.check-asset-cache.outputs.cache-hit != 'true' }}
       uses: ruby/setup-ruby@v1
       with:
         bundler-cache: true
 
-    - name: Build assets
-      if: steps.check-asset-cache.outputs.cache-hit != 'true'
+    - name: Build Assets
+      if: ${{ steps.check-asset-cache.outputs.cache-hit != 'true' }}
       shell: bash
       run: |
         yarn install --immutable
         bundle exec rails assets:precompile
 
     - name: Cache Rails Precompiled Assets
-      if: steps.check-asset-cache.outputs.cache-hit != 'true'
+      if: ${{ steps.check-asset-cache.outputs.cache-hit != 'true' }}
       id: lookup-cached-assets
-      uses: actions/cache/save@v4
+      uses: actions/cache/save@v5
       with:
         path: |
           public/assets

@@ -2,23 +2,23 @@ name: Ruby System Tests
 description: Runs Ruby system tests
 inputs:
   failure-screenshot-dir:
-    description: tmp directory where your tests save failure screenshots to
+    description: the directory where your test runner saves screenshots on failure
     required: false
     default: tmp/capybara
 
 runs:
-  using: "composite"
+  using: composite
   steps:
     - name: Setup Chrome
-      uses: browser-actions/setup-chrome@v1
+      uses: browser-actions/setup-chrome@v2
       id: setup-chrome
 
     - name: Enable Corepack
       shell: bash
       run: corepack enable
 
-    - name: Set up node
-      uses: actions/setup-node@v4
+    - name: Setup Node
+      uses: actions/setup-node@v6
       with:
         node-version-file: .node-version
         cache: yarn
@@ -27,14 +27,14 @@ runs:
       shell: bash
       run: yarn install --immutable
 
-    - name: Install Ruby and gems
+    - name: Install Ruby and Gems
       uses: ruby/setup-ruby@v1
       with:
         bundler-cache: true
 
     - name: Retrieve Cached Rails Assets
       id: cache-assets
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v5
       with:
         path: |
           public/assets
@@ -42,26 +42,19 @@ runs:
         key: rails-assets-${{ hashFiles('app/assets/images/**/*', 'app/assets/stylesheets/**/*', 'app/javascript/**/*', 'yarn.lock', 'Gemfile.lock') }}
         fail-on-cache-miss: true
 
-    # Technically the cache fail-on-cache-miss above should fail this flow...but it doesn't.
-    # This manually fails the workflow if the cache is not found.
-    - name: Fail if cache miss
-      if: steps.cache-assets.outputs.cache-hit != 'true'
-      shell: bash
-      run: exit 1
-
-    - name: Load previous turbo test runtime stats
+    - name: Load Previous Turbo-Test Runtime Stats
       id: restore-parallel-spec
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v5
       with:
         path: tmp/turbo_rspec_runtime.log
         key: parallel-spec-system-runtimes-${{ github.sha }}_${{ github.run_attempt }}
         restore-keys: parallel-spec-system-runtimes-
 
-    - name: Setup parallel databases
+    - name: Setup Parallel Databases
       shell: bash
       run: bundle exec rake parallel:create parallel:load_schema
 
-    - name: Rspec tests
+    - name: Run Rspec Tests
       shell: bash
       run: bundle exec parallel_rspec --verbose-command spec/system
       env:
@@ -69,21 +62,21 @@ runs:
         CAPYBARA_DRIVER: js
 
     - name: Publish Test Results
-      uses: mikepenz/action-junit-report@v4
+      uses: mikepenz/action-junit-report@v6
       if: success() || failure()
       with:
         check_name: Test Results
         report_paths: tmp/rspec-*.xml
         detailed_summary: true
 
-    - name: Analyze test runtimes
+    - name: Analyze Test Runtimes
       uses: RoleModel/actions/test-runtime-analyzer@v1
       with:
         test-output-path: tmp/turbo_rspec_runtime.log
 
-    - name: Upload screenshots
+    - name: Upload Screenshots
       if: failure()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: rspec-screenshots
         path: ${{ inputs.failure-screenshot-dir }}
