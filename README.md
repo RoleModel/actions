@@ -10,7 +10,7 @@ Inputs:
 Example:
 ```yaml
 - name: Cleanup
-  uses: RoleModel/actions/test-cleanup@v1
+  uses: RoleModel/actions/test-cleanup@v3
   with:
     artifact-prefix: rspec-system
 ```
@@ -26,7 +26,7 @@ Inputs:
 Example:
 ```yaml
 - name: Analyze test runtimes
-  uses: RoleModel/actions/test-runtime-analyzer@v1
+  uses: RoleModel/actions/test-runtime-analyzer@v3
   with:
     test-output-path: tmp/turbo_rspec_runtime.log
 ```
@@ -53,33 +53,32 @@ concurrency:
 env:
   CI: true
   RAILS_ENV: test
-  HONEYBADGER_SOURCE_MAP_DISABLED: true
   POSTGRES_USER: postgres
   POSTGRES_PASSWORD: password
-  SECRET_KEY_BASE: 0cb2b4ae6543f334e0eb5bc88bdabc24c9e5155ecb02a175c6f073a5a0d45a45f4a5b7d1288d3b412307bdfa19be441e97960ec4cd344f91f2d06a2595fb239c
+  SECRET_KEY_BASE: 123 # If you are using encrypted credentials, you'll need to extract this into a GitHub secret.
+                       # Otherwise, the only thing that matters is that the value is not nil.
 
 jobs:
   compile_assets:
-    name: Compile assets
+    name: Compile Assets
     runs-on: blacksmith-4vcpu-ubuntu-2204
     timeout-minutes: 5
-    outputs:
-      cache-hit: ${{ steps.check-asset-cache.outputs.cache-hit }}
     steps:
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - uses: RoleModel/actions/compile-assets@v2
+      - uses: RoleModel/actions/compile-assets@v3
         id: check-asset-cache
 
   non-system-test:
     name: Linting & Ruby Non-System Tests
     runs-on: blacksmith-8vcpu-ubuntu-2204
     timeout-minutes: 5
-    needs: compile_assets
+    # If you have non-system tests that touch the browser, you may need to uncomment the following line.
+    # needs: compile_assets
     services:
       postgres:
-        image: postgres:16
+        image: postgres:17
         ports:
           - "5432:5432"
         env:
@@ -87,14 +86,14 @@ jobs:
           POSTGRES_PASSWORD: password
 
     steps:
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Run shared flow
-        uses: RoleModel/actions/linting-and-non-system-tests@v2
+      - uses: RoleModel/actions/linting-and-non-system-tests@v3
         with:
           linting_step_required: true
           linting_step_command: bundle exec rubocop --fail-level warning --display-only-fail-level-offenses --format github
+          needs-compiled-assets: false # Remove this input if you uncommented `needs: compile_assets` above.
 
   system-test:
     name: Ruby System Tests
@@ -103,7 +102,7 @@ jobs:
     needs: compile_assets
     services:
       postgres:
-        image: postgres:16
+        image: postgres:17
         ports:
           - "5432:5432"
         env:
@@ -111,17 +110,16 @@ jobs:
           POSTGRES_PASSWORD: password
 
     steps:
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      # allows for custom install steps between checkout & test run if needed
-      - name: Setup vips
-        run: |
+      # Custom install steps may be added between checkout & test run if needed. e.g.
+      # If your application processes ActiveStorage::Variant records you probably need the following step:
+      - run: |
           sudo apt-get update
           sudo apt-get install -y libvips
 
-      - name: Run shared flow
-        uses: RoleModel/actions/system-tests@v2
+      - uses: RoleModel/actions/system-tests@v3
         # if you've configured capybara to be compatible with the tmp:clear task
         # you can tell the system-tests action like this:
         with:
