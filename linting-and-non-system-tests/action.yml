@@ -1,27 +1,28 @@
-name: 'Linting & Ruby Non-System Tests'
-description: 'Runs linting and non-system Ruby tests'
-
+name: Linting & Ruby Non-System Tests
+description: Runs linting and non-system Ruby tests
 inputs:
   linting_step_required:
-    description: 'Whether linting is required'
-    type: boolean
+    description: Whether linting is required
     required: false
-    default: false
+    default: 'false'
   linting_step_command:
-    description: 'Command for linting (e.g., "bundle exec rubocop")'
-    type: string
+    description: Command for linting (e.g., "bundle exec rubocop")
     required: false
-    default: ""
+    default: ''
+  needs-compiled-assets:
+    description: Whether to retrieve the Rails asset cache (set to false if your workflow does not depend on the compile-assets workflow)
+    required: false
+    default: 'true'
 
 runs:
-  using: "composite"
+  using: composite
   steps:
     - name: Enable Corepack
       shell: bash
       run: corepack enable
 
-    - name: Set up node
-      uses: actions/setup-node@v4
+    - name: Setup Node
+      uses: actions/setup-node@v6
       with:
         node-version-file: .node-version
         cache: yarn
@@ -30,14 +31,15 @@ runs:
       shell: bash
       run: yarn install --immutable
 
-    - name: Install Ruby and gems
+    - name: Install Ruby and Gems
       uses: ruby/setup-ruby@v1
       with:
         bundler-cache: true
 
     - name: Retrieve Cached Rails Assets
       id: cache-assets
-      uses: actions/cache/restore@v4
+      if: ${{ inputs.needs-compiled-assets == 'true' }}
+      uses: actions/cache/restore@v5
       with:
         path: |
           public/assets
@@ -45,36 +47,36 @@ runs:
         key: rails-assets-${{ hashFiles('app/assets/images/**/*', 'app/assets/stylesheets/**/*', 'app/javascript/**/*', 'yarn.lock', 'Gemfile.lock') }}
         fail-on-cache-miss: true
 
-    - name: Load previous turbo test runtime stats
+    - name: Load Previous Turbo-Test Runtime Stats
       id: restore-parallel-spec
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v5
       with:
         path: tmp/turbo_rspec_runtime.log
         key: parallel-spec-non-system-runtimes-${{ github.sha }}_${{ github.run_attempt }}
         restore-keys: parallel-spec-non-system-runtimes-
 
-    - name: Setup parallel databases
+    - name: Setup Parallel Databases
       shell: bash
       run: bundle exec rake parallel:create parallel:load_schema
 
-    - name: Rspec tests
-      shell: bash
-      run: bundle exec parallel_rspec --verbose --exclude-pattern "/system/"
-
     - name: Linting
-      if: ${{ inputs.linting_step_required }}
+      if: ${{ inputs.linting_step_required == 'true' }}
       shell: bash
       run: ${{ inputs.linting_step_command }}
 
+    - name: Run Rspec Tests
+      shell: bash
+      run: bundle exec parallel_rspec --verbose --exclude-pattern "/system/"
+
     - name: Publish Test Results
-      uses: mikepenz/action-junit-report@v4
+      uses: mikepenz/action-junit-report@v6
       if: success() || failure()
       with:
         check_name: Test Results
         report_paths: tmp/rspec-*.xml
         detailed_summary: true
 
-    - name: Analyze test runtimes
+    - name: Analyze Test Runtimes
       uses: RoleModel/actions/test-runtime-analyzer@v1
       with:
         test-output-path: tmp/turbo_rspec_runtime.log
