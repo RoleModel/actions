@@ -1,8 +1,10 @@
-name: "Test Cleanup"
-
+name: Test Cleanup
+description: Uploads Test Logs and prints system info to the console after test runs.
 inputs:
   artifact-prefix:
-    type: string
+    description: >
+      Prefix for the uploaded artifact name. Full artifact name will be {prefix}-logs.
+      This is used to differentiate logs from different test runs (e.g. system vs non-system tests).
     required: true
 
 runs:

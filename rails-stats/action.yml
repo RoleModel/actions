@@ -1,0 +1,48 @@
+name: Project Stats
+description: Runs `bin/rails stats` and converts the output to a Markdown Table for the GitHub Actions summary.
+inputs:
+  command:
+    description: >
+      A custom command to run instead of `bin/rails stats`.
+      The output must conform to the same ascii table format this action work correctly.
+    required: false
+    default: bin/rails stats
+  install-ruby:
+    description: >
+      Whether Ruby & Gems install should be performed before running the command.
+      Set this to false if your workflow has already set up Ruby and installed gems in a previous step.
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: Install Ruby and Gems
+      uses: ruby/setup-ruby@v1
+      if: inputs.install-ruby == 'true'
+      with:
+        bundler-cache: true
+
+    - name: Run Stats Command and Capture Output
+      shell: bash
+      run: |
+        ${{ inputs.command }} | sed -n '/^|/p' | while IFS= read -r line; do
+          trimmed="${line#|}"
+          trimmed="${trimmed%|}"
+          IFS='|' read -ra cells <<< "$trimmed"
+          row="| "
+          for cell in "${cells[@]}"; do
+            cell="$(echo "$cell" | sed 's/^ *//;s/ *$//')"
+            row+="$cell | "
+          done
+          echo "$row"
+
+          if [ -z "$header_done" ]; then
+            sep="| "
+            for cell in "${cells[@]}"; do
+              sep+="--- | "
+            done
+            echo "$sep"
+            header_done=1
+          fi
+        done >> $GITHUB_STEP_SUMMARY
