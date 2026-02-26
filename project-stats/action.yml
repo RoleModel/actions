@@ -1,0 +1,23 @@
+name: Project Stats
+description: Runs `bin/rails stats` and converts the output to a Markdown Table for the GitHub Actions summary.
+inputs:
+  install-ruby:
+    description: >
+      Whether Ruby & Gems install should be performed before running the command.
+      Set this to false if you're using this action as a step within a larger job that has already setup Ruby.
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: Install Ruby and Gems
+      uses: ruby/setup-ruby@v1
+      if: inputs.install-ruby == 'true'
+      with:
+        bundler-cache: true
+
+    - name: Run Stats Command and Capture Output
+      shell: bash
+      run: |
+        bin/rails stats | ${{ github.action_path }}/scripts/format-stats >> $GITHUB_STEP_SUMMARY

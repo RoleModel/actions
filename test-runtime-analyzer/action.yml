@@ -1,16 +1,16 @@
-name: 'Test Runtime Analyzer'
-description: 'Analyzes test runtimes and shows the slowest tests'
+name: Test Runtime Analyzer
+description: Analyzes test runtimes and shows the slowest tests
 inputs:
   test-output-path:
-    description: 'Path to the test output file'
+    description: Path to the test output file
     required: true
   top-count:
-    description: 'Number of slowest tests to show'
+    description: Number of slowest tests to show
     required: false
     default: '10'
 
 runs:
-  using: "composite"
+  using: composite
   steps:
     - name: Analyze test runtimes
       shell: bash
