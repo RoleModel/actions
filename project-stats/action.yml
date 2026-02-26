@@ -4,7 +4,7 @@ inputs:
   install-ruby:
     description: >
       Whether Ruby & Gems install should be performed before running the command.
-      Set this to false if your using this action as a step within a larger job that has already setup Ruby.
+      Set this to false if you're using this action as a step within a larger job that has already setup Ruby.
     required: false
     default: 'true'
 
@@ -20,23 +20,4 @@ runs:
     - name: Run Stats Command and Capture Output
       shell: bash
       run: |
-        bin/rails stats | sed -n '/^|/p' | while IFS= read -r line; do
-          trimmed="${line#|}"
-          trimmed="${trimmed%|}"
-          IFS='|' read -ra cells <<< "$trimmed"
-          row="| "
-          for cell in "${cells[@]}"; do
-            cell="$(echo "$cell" | sed 's/^ *//;s/ *$//')"
-            row+="$cell | "
-          done
-          echo "$row"
-
-          if [ -z "$header_done" ]; then
-            sep="| "
-            for cell in "${cells[@]}"; do
-              sep+="--- | "
-            done
-            echo "$sep"
-            header_done=1
-          fi
-        done >> $GITHUB_STEP_SUMMARY
+        bin/rails stats | ${{ github.action_path }}/scripts/format-stats >> $GITHUB_STEP_SUMMARY

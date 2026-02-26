@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+sed -n '/^|/p' | while IFS= read -r line; do
+  trimmed="${line#|}"
+  trimmed="${trimmed%|}"
+  IFS='|' read -ra cells <<< "$trimmed"
+  row="| "
+  for cell in "${cells[@]}"; do
+    cell="$(echo "$cell" | sed 's/^ *//;s/ *$//')"
+    row+="$cell | "
+  done
+  echo "$row"
+
+  if [ -z "$header_done" ]; then
+    sep="| "
+    for cell in "${cells[@]}"; do
+      sep+="--- | "
+    done
+    echo "$sep"
+    header_done=1
+  fi
+done
