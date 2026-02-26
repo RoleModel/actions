@@ -1,6 +1,6 @@
 # RoleModel/actions
 
-## [v3.1.0] Feb 25, 2026
+## [v3.1.0] Feb 26, 2026
 
 Add new `project-stats` action which provides a markdown version of
 the output of `bin/rails stats` to your workflow's summary page on Github.
