@@ -37,6 +37,50 @@ Example:
     test-output-path: tmp/turbo_rspec_runtime.log
 ```
 
+## staging-auto-merge
+
+Use this action to maintain a `staging` branch with the changes from all open PRs labeled `Staging`. This is recommended to be used with a workflow that auto-deploys the `staging` branch.
+
+If a PR cannot be merged cleanly, the action comments on the PR with conflict details and removes the `Staging` label.
+
+This action assumes the repository has already been cloned with `ref: staging` and `fetch-depth: 0` set. Commits/pushes made using the default GitHub Actions access key do not trigger other actions, so make sure to generate a personal access token or SSH key so that staging auto-deploys can work.
+
+Inputs:
+
+- `github-token`: GitHub token used to list/update pull requests. Default: `${{ github.token }}`
+- `primary-branch`: Branch used as the reset base before staged merges. Default: `main`
+
+Example:
+
+```yaml
+name: Maintain staging branch
+
+on:
+  pull_request:
+    types:
+      - labeled
+      - unlabeled
+      - closed
+      - synchronize
+
+jobs:
+  maintain_staging:
+    if: (contains(github.event.pull_request.labels[*].name, 'Staging')) || (github.event.action == 'closed' && github.event.pull_request.merged) || (github.event.label.name == 'Staging')
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: staging
+          fetch-depth: 0
+          ssh-key: ${{ secrets.AUTOMATED_COMMITS_KEY }} # IMPORTANT: Use a custom key to allow triggering other workflows
+
+      - name: Rebuild staging branch
+        uses: RoleModel/actions/staging-auto-merge@v3
+```
+
 ## Shared workflow actions
 
 This is a combination of multiple composite actions that can be used to run your entire CI flow for a rails app using parallel_tests. Each action allow you to customize the machine, environment variables, and any custom install steps that are needed. It does require you to check out the code yourself, since some install steps might happen after that.

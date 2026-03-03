@@ -1,0 +1,17 @@
+name: Update Staging
+description: Keep the staging branch up-to-date with PRs tagged with the "Staging" label.
+
+inputs:
+  github-token:
+    description: Override the GitHub token.
+    required: false
+    default:  ${{ github.token }}
+
+  primary-branch:
+    description: The primary branch name (defaults to `main`).
+    required: false
+    default: main
+
+runs:
+  using: node24
+  main: dist/index.js
