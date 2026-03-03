@@ -1,16 +1,19 @@
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
+  ssr: {
+    noExternal: true,
+  },
   build: {
-    lib: {
-      entry: 'src/index.js',
-      formats: ['es'],
-      fileName: () => 'index.js',
-    },
+    ssr: 'src/index.js',
+    target: 'node24',
     outDir: 'dist',
+    emptyOutDir: true,
     rollupOptions: {
       external: [],
       output: {
+        entryFileNames: 'index.js',
+        format: 'es',
         inlineDynamicImports: true,
       },
     },
