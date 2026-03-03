@@ -5,7 +5,10 @@
   "main": "src/index.js",
   "type": "module",
   "scripts": {
-    "build": "ncc build src/index.js -o dist"
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "bundle": "ncc build src/index.js -o dist",
+    "build": "npm run bundle",
+    "all": "npm test && npm run bundle"
   },
   "dependencies": {
     "@actions/core": "^1.11.1",
@@ -13,6 +16,7 @@
     "@actions/github": "^6.0.0"
   },
   "devDependencies": {
-    "@vercel/ncc": "^0.38.1"
+    "@vercel/ncc": "^0.38.1",
+    "jest": "^29.7.0"
   }
 }

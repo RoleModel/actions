@@ -31648,157 +31648,6 @@ function parseParams (str) {
 module.exports = parseParams
 
 
-/***/ }),
-
-/***/ 9722:
-/***/ ((__webpack_module__, __unused_webpack___webpack_exports__, __nccwpck_require__) => {
-
-__nccwpck_require__.a(__webpack_module__, async (__webpack_handle_async_dependencies__, __webpack_async_result__) => { try {
-/* harmony import */ var _actions_core__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(7484);
-/* harmony import */ var _actions_github__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(3228);
-/* harmony import */ var _actions_exec__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(5236);
-
-
-
-
-const token = _actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('github-token', { required: true })
-const primaryBranch = _actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('primary-branch', { required: true })
-const octokit = _actions_github__WEBPACK_IMPORTED_MODULE_1__.getOctokit(token)
-await (0,_actions_exec__WEBPACK_IMPORTED_MODULE_2__.exec)('git config --global user.email "github-actions@github.com"')
-await (0,_actions_exec__WEBPACK_IMPORTED_MODULE_2__.exec)('git config --global user.name "github-actions"')
-await (0,_actions_exec__WEBPACK_IMPORTED_MODULE_2__.exec)('git', ['reset', '--hard', `origin/${primaryBranch}`])
-
-function extractFilenamesFromConflicts(logText) {
-  const regex = /CONFLICT \(content\): Merge conflict in\s+([^\n]+)/g
-  const matches = []
-  let match
-
-  while ((match = regex.exec(logText)) !== null) {
-    matches.push(match[1])
-  }
-
-  return matches
-}
-
-function formatCommentBody(mergeConflictMessage, consoleErrorMessage) {
-  const formattedConflictFiles = extractFilenamesFromConflicts(mergeConflictMessage).join('\n')
-
-  let conflictMessage = `Merge Conflicts in these files:\n${formattedConflictFiles}`
-  if (consoleErrorMessage) {
-    conflictMessage += `\n\nMerge Command Error: ${consoleErrorMessage}`
-  }
-  return conflictMessage
-}
-
-async function findStagingLabelName() {
-  const repoLabels = await octokit.rest.issues.listLabelsForRepo({
-    owner: _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.repo.owner,
-    repo: _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.repo.repo,
-  })
-
-  return repoLabels.data.find((label) => label.name.toLowerCase() === 'staging')?.name
-}
-
-function hasStagingLabel(labels, stagingLabelName) {
-  return labels.some((label) => label.name.toLowerCase() === stagingLabelName.toLowerCase())
-}
-
-async function removeStagingLabel(issueNumber, stagingLabelName) {
-  if (!stagingLabelName) return
-
-  try {
-    await octokit.rest.issues.removeLabel({
-      owner: _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.repo.owner,
-      repo: _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.repo.repo,
-      issue_number: issueNumber,
-      name: stagingLabelName,
-    })
-  } catch (error) {
-    const status = error?.status
-
-    if (status !== 404) {
-      throw error
-    }
-  }
-}
-
-const stagingLabelName = await findStagingLabelName()
-
-if (!stagingLabelName) {
-  const errorMessage = 'Required label "Staging" was not found in this repository.'
-  _actions_core__WEBPACK_IMPORTED_MODULE_0__.error(errorMessage)
-  process.exit(1)
-}
-
-const pullRequests = await octokit.rest.pulls.list({
-  ..._actions_github__WEBPACK_IMPORTED_MODULE_1__.context.repo,
-  state: 'open',
-  sort: 'created',
-  direction: 'asc',
-})
-
-for (const pr of pullRequests.data) {
-  let execOutput = ''
-  let execError = ''
-  const options = {
-    listeners: {
-      stdout: (data) => {
-        execOutput += data.toString()
-      },
-      stderr: (data) => {
-        execError += data.toString()
-      },
-    },
-  }
-
-  const {
-    title,
-    number,
-    labels,
-    head: { ref: branch },
-  } = pr
-
-  if (hasStagingLabel(labels, stagingLabelName)) {
-    try {
-      await (0,_actions_exec__WEBPACK_IMPORTED_MODULE_2__.exec)('git', ['merge', `origin/${branch}`, '--squash', '--verbose'], options)
-      await (0,_actions_exec__WEBPACK_IMPORTED_MODULE_2__.exec)('git', ['commit', '-m', title])
-    } catch (error) {
-      await (0,_actions_exec__WEBPACK_IMPORTED_MODULE_2__.exec)('git restore --staged .')
-      await (0,_actions_exec__WEBPACK_IMPORTED_MODULE_2__.exec)('git restore .')
-      await (0,_actions_exec__WEBPACK_IMPORTED_MODULE_2__.exec)('git clean -df')
-      await octokit.rest.issues.createComment({
-        owner: _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.repo.owner,
-        repo: _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.repo.repo,
-        issue_number: number,
-        body: formatCommentBody(execOutput, execError),
-      })
-      await removeStagingLabel(number, stagingLabelName)
-    }
-  }
-}
-
-await (0,_actions_exec__WEBPACK_IMPORTED_MODULE_2__.exec)('git push --force')
-
-const closedPullRequests = await octokit.rest.pulls.list({
-  ..._actions_github__WEBPACK_IMPORTED_MODULE_1__.context.repo,
-  state: 'closed',
-  sort: 'created',
-  direction: 'desc',
-})
-
-console.log('Label Name: ', stagingLabelName)
-
-for (const closedPr of closedPullRequests.data) {
-  const { number, labels, title } = closedPr
-  if (hasStagingLabel(labels, stagingLabelName)) {
-    console.log('removing label from: ', title)
-    await removeStagingLabel(number, stagingLabelName)
-  }
-}
-
-__webpack_async_result__();
-} catch(e) { __webpack_async_result__(e); } }, 1);
-
 /***/ })
 
 /******/ });
@@ -31834,84 +31683,165 @@ __webpack_async_result__();
 /******/ }
 /******/ 
 /************************************************************************/
-/******/ /* webpack/runtime/async module */
-/******/ (() => {
-/******/ 	var webpackQueues = typeof Symbol === "function" ? Symbol("webpack queues") : "__webpack_queues__";
-/******/ 	var webpackExports = typeof Symbol === "function" ? Symbol("webpack exports") : "__webpack_exports__";
-/******/ 	var webpackError = typeof Symbol === "function" ? Symbol("webpack error") : "__webpack_error__";
-/******/ 	var resolveQueue = (queue) => {
-/******/ 		if(queue && queue.d < 1) {
-/******/ 			queue.d = 1;
-/******/ 			queue.forEach((fn) => (fn.r--));
-/******/ 			queue.forEach((fn) => (fn.r-- ? fn.r++ : fn()));
-/******/ 		}
-/******/ 	}
-/******/ 	var wrapDeps = (deps) => (deps.map((dep) => {
-/******/ 		if(dep !== null && typeof dep === "object") {
-/******/ 			if(dep[webpackQueues]) return dep;
-/******/ 			if(dep.then) {
-/******/ 				var queue = [];
-/******/ 				queue.d = 0;
-/******/ 				dep.then((r) => {
-/******/ 					obj[webpackExports] = r;
-/******/ 					resolveQueue(queue);
-/******/ 				}, (e) => {
-/******/ 					obj[webpackError] = e;
-/******/ 					resolveQueue(queue);
-/******/ 				});
-/******/ 				var obj = {};
-/******/ 				obj[webpackQueues] = (fn) => (fn(queue));
-/******/ 				return obj;
-/******/ 			}
-/******/ 		}
-/******/ 		var ret = {};
-/******/ 		ret[webpackQueues] = x => {};
-/******/ 		ret[webpackExports] = dep;
-/******/ 		return ret;
-/******/ 	}));
-/******/ 	__nccwpck_require__.a = (module, body, hasAwait) => {
-/******/ 		var queue;
-/******/ 		hasAwait && ((queue = []).d = -1);
-/******/ 		var depQueues = new Set();
-/******/ 		var exports = module.exports;
-/******/ 		var currentDeps;
-/******/ 		var outerResolve;
-/******/ 		var reject;
-/******/ 		var promise = new Promise((resolve, rej) => {
-/******/ 			reject = rej;
-/******/ 			outerResolve = resolve;
-/******/ 		});
-/******/ 		promise[webpackExports] = exports;
-/******/ 		promise[webpackQueues] = (fn) => (queue && fn(queue), depQueues.forEach(fn), promise["catch"](x => {}));
-/******/ 		module.exports = promise;
-/******/ 		body((deps) => {
-/******/ 			currentDeps = wrapDeps(deps);
-/******/ 			var fn;
-/******/ 			var getResult = () => (currentDeps.map((d) => {
-/******/ 				if(d[webpackError]) throw d[webpackError];
-/******/ 				return d[webpackExports];
-/******/ 			}))
-/******/ 			var promise = new Promise((resolve) => {
-/******/ 				fn = () => (resolve(getResult));
-/******/ 				fn.r = 0;
-/******/ 				var fnQueue = (q) => (q !== queue && !depQueues.has(q) && (depQueues.add(q), q && !q.d && (fn.r++, q.push(fn))));
-/******/ 				currentDeps.map((dep) => (dep[webpackQueues](fnQueue)));
-/******/ 			});
-/******/ 			return fn.r ? promise : getResult();
-/******/ 		}, (err) => ((err ? reject(promise[webpackError] = err) : outerResolve(exports)), resolveQueue(queue)));
-/******/ 		queue && queue.d < 0 && (queue.d = 0);
-/******/ 	};
-/******/ })();
-/******/ 
 /******/ /* webpack/runtime/compat */
 /******/ 
 /******/ if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = new URL('.', import.meta.url).pathname.slice(import.meta.url.match(/^file:\/\/\/\w:/) ? 1 : 0, -1) + "/";
 /******/ 
 /************************************************************************/
-/******/ 
-/******/ // startup
-/******/ // Load entry module and return exports
-/******/ // This entry module used 'module' so it can't be inlined
-/******/ var __webpack_exports__ = __nccwpck_require__(9722);
-/******/ __webpack_exports__ = await __webpack_exports__;
-/******/ 
+var __webpack_exports__ = {};
+
+// EXTERNAL MODULE: ./node_modules/@actions/core/lib/core.js
+var core = __nccwpck_require__(7484);
+// EXTERNAL MODULE: ./node_modules/@actions/github/lib/github.js
+var github = __nccwpck_require__(3228);
+// EXTERNAL MODULE: ./node_modules/@actions/exec/lib/exec.js
+var exec = __nccwpck_require__(5236);
+;// CONCATENATED MODULE: ./src/main.js
+
+
+
+
+function extractFilenamesFromConflicts(logText) {
+  const regex = /CONFLICT \(content\): Merge conflict in\s+([^\n]+)/g
+  const matches = []
+  let match
+
+  while ((match = regex.exec(logText)) !== null) {
+    matches.push(match[1])
+  }
+
+  return matches
+}
+
+function formatCommentBody(mergeConflictMessage, consoleErrorMessage) {
+  const formattedConflictFiles = extractFilenamesFromConflicts(mergeConflictMessage).join('\n')
+
+  let conflictMessage = `Merge Conflicts in these files:\n${formattedConflictFiles}`
+  if (consoleErrorMessage) {
+    conflictMessage += `\n\nMerge Command Error: ${consoleErrorMessage}`
+  }
+  return conflictMessage
+}
+
+function hasStagingLabel(labels, stagingLabelName) {
+  return labels.some((label) => label.name.toLowerCase() === stagingLabelName.toLowerCase())
+}
+
+async function run() {
+  const token = core.getInput('github-token', { required: true })
+  const primaryBranch = core.getInput('primary-branch', { required: true })
+  const octokit = github.getOctokit(token)
+
+  await (0,exec.exec)('git config --global user.email "github-actions@github.com"')
+  await (0,exec.exec)('git config --global user.name "github-actions"')
+  await (0,exec.exec)('git', ['reset', '--hard', `origin/${primaryBranch}`])
+
+  async function findStagingLabelName() {
+    const repoLabels = await octokit.rest.issues.listLabelsForRepo({
+      owner: github.context.repo.owner,
+      repo: github.context.repo.repo,
+    })
+
+    return repoLabels.data.find((label) => label.name.toLowerCase() === 'staging')?.name
+  }
+
+  async function removeStagingLabel(issueNumber, stagingLabelName) {
+    if (!stagingLabelName) return
+
+    try {
+      await octokit.rest.issues.removeLabel({
+        owner: github.context.repo.owner,
+        repo: github.context.repo.repo,
+        issue_number: issueNumber,
+        name: stagingLabelName,
+      })
+    } catch (error) {
+      const status = error?.status
+
+      if (status !== 404) {
+        throw error
+      }
+    }
+  }
+
+  const stagingLabelName = await findStagingLabelName()
+
+  if (!stagingLabelName) {
+    const errorMessage = 'Required label "Staging" was not found in this repository.'
+    core.error(errorMessage)
+    throw new Error(errorMessage)
+  }
+
+  const pullRequests = await octokit.rest.pulls.list({
+    ...github.context.repo,
+    state: 'open',
+    sort: 'created',
+    direction: 'asc',
+  })
+
+  for (const pr of pullRequests.data) {
+    let execOutput = ''
+    let execError = ''
+    const options = {
+      listeners: {
+        stdout: (data) => {
+          execOutput += data.toString()
+        },
+        stderr: (data) => {
+          execError += data.toString()
+        },
+      },
+    }
+
+    const {
+      title,
+      number,
+      labels,
+      head: { ref: branch },
+    } = pr
+
+    if (hasStagingLabel(labels, stagingLabelName)) {
+      try {
+        await (0,exec.exec)('git', ['merge', `origin/${branch}`, '--squash', '--verbose'], options)
+        await (0,exec.exec)('git', ['commit', '-m', title])
+      } catch (error) {
+        await (0,exec.exec)('git restore --staged .')
+        await (0,exec.exec)('git restore .')
+        await (0,exec.exec)('git clean -df')
+        await octokit.rest.issues.createComment({
+          owner: github.context.repo.owner,
+          repo: github.context.repo.repo,
+          issue_number: number,
+          body: formatCommentBody(execOutput, execError),
+        })
+        await removeStagingLabel(number, stagingLabelName)
+      }
+    }
+  }
+
+  await (0,exec.exec)('git push --force')
+
+  const closedPullRequests = await octokit.rest.pulls.list({
+    ...github.context.repo,
+    state: 'closed',
+    sort: 'created',
+    direction: 'desc',
+  })
+
+  console.log('Label Name: ', stagingLabelName)
+
+  for (const closedPr of closedPullRequests.data) {
+    const { number, labels, title } = closedPr
+    if (hasStagingLabel(labels, stagingLabelName)) {
+      console.log('removing label from: ', title)
+      await removeStagingLabel(number, stagingLabelName)
+    }
+  }
+}
+
+;// CONCATENATED MODULE: ./src/index.js
+
+
+
+run().catch(core.setFailed)
+
