@@ -6,9 +6,7 @@
   "type": "module",
   "scripts": {
     "test": "vitest",
-    "bundle": "vite build",
-    "build": "npm run bundle",
-    "all": "npm test && npm run bundle"
+    "build": "vite build"
   },
   "dependencies": {
     "@actions/core": "^1.11.1",

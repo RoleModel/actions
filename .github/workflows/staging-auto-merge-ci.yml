@@ -11,7 +11,7 @@ on:
       - .github/workflows/staging-auto-merge-ci.yml
 
 jobs:
-  test-and-bundle:
+  test-and-build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -30,8 +30,8 @@ jobs:
         run: npm test
         working-directory: staging-auto-merge
 
-      - name: Bundle action
-        run: npm run bundle
+      - name: Build action
+        run: npm run build
         working-directory: staging-auto-merge
 
       - name: Verify dist is up to date
