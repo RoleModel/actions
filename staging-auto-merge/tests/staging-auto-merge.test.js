@@ -51,7 +51,7 @@ describe('StagingAutoMerge', () => {
         Promise.resolve({ data: state === 'open' ? openPulls : closedPulls }),
       )
 
-      const stagingAutoMerge = new StagingAutoMerge(octokit, logger, primaryBranch, repo)
+      const stagingAutoMerge = new StagingAutoMerge(octokit, primaryBranch, repo, logger)
       const execMock = vi.fn().mockResolvedValue(undefined)
       stagingAutoMerge.exec = execMock
 
@@ -86,7 +86,7 @@ describe('StagingAutoMerge', () => {
         Promise.resolve({ data: state === 'open' ? openPulls : [] }),
       )
 
-      const stagingAutoMerge = new StagingAutoMerge(octokit, logger, primaryBranch, repo)
+      const stagingAutoMerge = new StagingAutoMerge(octokit, primaryBranch, repo, logger)
       const execMock = vi.fn(async (command, args, options) => {
         if (command === 'git' && Array.isArray(args) && args[0] === 'merge') {
           options.listeners.stdout(

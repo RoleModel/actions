@@ -23211,7 +23211,7 @@ function getOctokit(token2, options, ...additionalPlugins) {
 getOctokit_1 = github.getOctokit = getOctokit;
 var execExports = requireExec();
 class StagingAutoMerge {
-  constructor(octokit2, logger = console, primaryBranch2, repo) {
+  constructor(octokit2, primaryBranch2, repo, logger = console) {
     if (!primaryBranch2) {
       throw new Error("Primary branch is required.");
     }
@@ -23364,5 +23364,5 @@ Merge Command Error: ${consoleErrorMessage}`;
 const token = coreExports.getInput("github-token", { required: true });
 const primaryBranch = coreExports.getInput("primary-branch", { required: true });
 const octokit = getOctokit_1(token);
-const stagingAutoMerge = new StagingAutoMerge(octokit, console, primaryBranch, context.repo);
+const stagingAutoMerge = new StagingAutoMerge(octokit, primaryBranch, context.repo, console);
 stagingAutoMerge.run().catch(coreExports.setFailed);

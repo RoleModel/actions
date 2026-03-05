@@ -1,7 +1,7 @@
 import { exec as actionsExec } from '@actions/exec'
 
 export default class StagingAutoMerge {
-  constructor(octokit, logger = console, primaryBranch, repo) {
+  constructor(octokit, primaryBranch, repo, logger = console) {
     if (!primaryBranch) {
       throw new Error('Primary branch is required.')
     }
