@@ -1,6 +1,6 @@
 # RoleModel/actions
 
-## [v3.2.0] Mar 3, 2026
+## [v3.2.0] Mar 5, 2026
 
 - Add new `staging-auto-merge` action, migrated from https://github.com/RoleModel/staging-auto-merge.
   - Update staging conflict handling to remove the `Staging` label immediately when merge conflicts occur.

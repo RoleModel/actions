@@ -23243,6 +23243,7 @@ class StagingAutoMerge {
     if (!this.stagingLabelName) {
       throw new Error('Required label "Staging" was not found in this repository.');
     }
+    this.logger.info("Label Name: ", this.stagingLabelName);
   }
   async mergeStagedPullRequests() {
     const pullRequests = await this.octokit.rest.pulls.list({
@@ -23295,7 +23296,6 @@ class StagingAutoMerge {
       sort: "created",
       direction: "desc"
     });
-    this.logger.info("Label Name: ", this.stagingLabelName);
     for (const closedPr of closedPullRequests.data) {
       if (this.hasStagingLabel(closedPr.labels)) {
         this.logger.info("removing label from: ", closedPr.title);

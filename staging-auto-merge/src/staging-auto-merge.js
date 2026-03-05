@@ -40,6 +40,8 @@ export default class StagingAutoMerge {
     if (!this.stagingLabelName) {
       throw new Error('Required label "Staging" was not found in this repository.')
     }
+
+    this.logger.info('Label Name: ', this.stagingLabelName)
   }
 
   async mergeStagedPullRequests() {
@@ -99,8 +101,6 @@ export default class StagingAutoMerge {
       sort: 'created',
       direction: 'desc',
     })
-
-    this.logger.info('Label Name: ', this.stagingLabelName)
 
     for (const closedPr of closedPullRequests.data) {
       if (this.hasStagingLabel(closedPr.labels)) {

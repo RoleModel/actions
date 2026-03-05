@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
+  // Using "ssr" config to get Vite's defaults for code running in Node
   ssr: {
     noExternal: true,
   },
