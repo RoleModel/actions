@@ -17,16 +17,32 @@ export default class StagingAutoMerge {
   }
 
   async run() {
+    await this.validateStagingLabel()
+    await this.configureGitUser()
+    await this.resetToPrimaryBranch()
+    await this.mergeStagedPullRequests()
+    await this.pushChanges()
+    await this.cleanupClosedPullRequests()
+  }
+
+  async configureGitUser() {
     await this.exec('git config --global user.email "github-actions@github.com"')
     await this.exec('git config --global user.name "github-actions"')
+  }
+
+  async resetToPrimaryBranch() {
     await this.exec('git', ['reset', '--hard', `origin/${this.primaryBranch}`])
+  }
 
-    const stagingLabelName = await this.findStagingLabelName()
+  async validateStagingLabel() {
+    this.stagingLabelName = await this.findStagingLabelName()
 
-    if (!stagingLabelName) {
+    if (!this.stagingLabelName) {
       throw new Error('Required label "Staging" was not found in this repository.')
     }
+  }
 
+  async mergeStagedPullRequests() {
     const pullRequests = await this.octokit.rest.pulls.list({
       ...this.repo,
       state: 'open',
@@ -35,42 +51,48 @@ export default class StagingAutoMerge {
     })
 
     for (const pr of pullRequests.data) {
-      let execOutput = ''
-      let execError = ''
-      const options = {
-        listeners: {
-          stdout: (data) => {
-            execOutput += data.toString()
-          },
-          stderr: (data) => {
-            execError += data.toString()
-          },
-        },
-      }
-
-      const {
-        title,
-        number,
-        labels,
-        head: { ref: branch },
-      } = pr
-
-      if (this.hasStagingLabel(labels, stagingLabelName)) {
-        try {
-          await this.exec('git', ['merge', `origin/${branch}`, '--squash', '--verbose'], options)
-          await this.exec('git', ['commit', '-m', title])
-        } catch (error) {
-          await this.exec('git restore --staged .')
-          await this.exec('git restore .')
-          await this.exec('git clean -df')
-          await this.createMergeConflictComment(number, execOutput, execError)
-          await this.removeStagingLabel(number, stagingLabelName)
-        }
+      if (this.hasStagingLabel(pr.labels)) {
+        await this.mergePullRequest(pr)
       }
     }
+  }
 
+  async mergePullRequest(pr) {
+    const { title, number, head: { ref: branch } } = pr
+    let execOutput = ''
+    let execError = ''
+    const options = {
+      listeners: {
+        stdout: (data) => {
+          execOutput += data.toString()
+        },
+        stderr: (data) => {
+          execError += data.toString()
+        },
+      },
+    }
+
+    try {
+      await this.exec('git', ['merge', `origin/${branch}`, '--squash', '--verbose'], options)
+      await this.exec('git', ['commit', '-m', title])
+    } catch (error) {
+      await this.abortMerge()
+      await this.createMergeConflictComment(number, execOutput, execError)
+      await this.removeStagingLabel(number)
+    }
+  }
+
+  async abortMerge() {
+    await this.exec('git restore --staged .')
+    await this.exec('git restore .')
+    await this.exec('git clean -df')
+  }
+
+  async pushChanges() {
     await this.exec('git push --force')
+  }
 
+  async cleanupClosedPullRequests() {
     const closedPullRequests = await this.octokit.rest.pulls.list({
       ...this.repo,
       state: 'closed',
@@ -78,13 +100,12 @@ export default class StagingAutoMerge {
       direction: 'desc',
     })
 
-    this.logger.info('Label Name: ', stagingLabelName)
+    this.logger.info('Label Name: ', this.stagingLabelName)
 
     for (const closedPr of closedPullRequests.data) {
-      const { number, labels, title } = closedPr
-      if (this.hasStagingLabel(labels, stagingLabelName)) {
-        this.logger.info('removing label from: ', title)
-        await this.removeStagingLabel(number, stagingLabelName)
+      if (this.hasStagingLabel(closedPr.labels)) {
+        this.logger.info('removing label from: ', closedPr.title)
+        await this.removeStagingLabel(closedPr.number)
       }
     }
   }
@@ -115,8 +136,8 @@ export default class StagingAutoMerge {
     return conflictMessage
   }
 
-  hasStagingLabel(labels, stagingLabelName) {
-    return labels.some((label) => label.name.toLowerCase() === stagingLabelName.toLowerCase())
+  hasStagingLabel(labels) {
+    return labels.some((label) => label.name.toLowerCase() === this.stagingLabelName.toLowerCase())
   }
 
   async findStagingLabelName() {
@@ -128,15 +149,15 @@ export default class StagingAutoMerge {
     return repoLabels.data.find((label) => label.name.toLowerCase() === 'staging')?.name
   }
 
-  async removeStagingLabel(issueNumber, stagingLabelName) {
-    if (!stagingLabelName) return
+  async removeStagingLabel(issueNumber) {
+    if (!this.stagingLabelName) return
 
     try {
       await this.octokit.rest.issues.removeLabel({
         owner: this.repo.owner,
         repo: this.repo.repo,
         issue_number: issueNumber,
-        name: stagingLabelName,
+        name: this.stagingLabelName,
       })
     } catch (error) {
       const status = error?.status
