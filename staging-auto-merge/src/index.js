@@ -1,10 +1,10 @@
-import * as core from '@actions/core'
-import * as github from '@actions/github'
+import { getInput, setFailed } from '@actions/core'
+import { getOctokit, context } from '@actions/github'
 import StagingAutoMerge from './staging-auto-merge.js'
 
-const token = core.getInput('github-token', { required: true })
-const primaryBranch = core.getInput('primary-branch', { required: true })
-const octokit = github.getOctokit(token)
-const stagingAutoMerge = new StagingAutoMerge(octokit, primaryBranch, github.context.repo, console)
+const token = getInput('github-token', { required: true })
+const primaryBranch = getInput('primary-branch', { required: true })
+const octokit = getOctokit(token)
+const stagingAutoMerge = new StagingAutoMerge(octokit, primaryBranch, context.repo, console)
 
-stagingAutoMerge.run().catch(core.setFailed)
+stagingAutoMerge.run().catch(setFailed)
