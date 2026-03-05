@@ -2,6 +2,8 @@ name: staging-auto-merge-ci
 
 on:
   push:
+    branches:
+      - main
     paths:
       - staging-auto-merge/**
       - .github/workflows/staging-auto-merge-ci.yml
