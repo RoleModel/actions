@@ -3688,9 +3688,9 @@ function requireUtil$4() {
     let policy = "";
     if (policyHeader.length > 0) {
       for (let i = policyHeader.length; i !== 0; i--) {
-        const token = policyHeader[i - 1].trim();
-        if (referrerPolicyTokens.has(token)) {
-          policy = token;
+        const token2 = policyHeader[i - 1].trim();
+        if (referrerPolicyTokens.has(token2)) {
+          policy = token2;
           break;
         }
       }
@@ -3885,9 +3885,9 @@ function requireUtil$4() {
   function parseMetadata(metadata) {
     const result = [];
     let empty = true;
-    for (const token of metadata.split(" ")) {
+    for (const token2 of metadata.split(" ")) {
       empty = false;
-      const parsedToken = parseHashWithOptions.exec(token);
+      const parsedToken = parseHashWithOptions.exec(token2);
       if (parsedToken === null || parsedToken.groups === void 0 || parsedToken.groups.algo === void 0) {
         continue;
       }
@@ -17604,8 +17604,8 @@ class BasicCredentialHandler {
 }
 auth$1.BasicCredentialHandler = BasicCredentialHandler;
 class BearerCredentialHandler {
-  constructor(token) {
-    this.token = token;
+  constructor(token2) {
+    this.token = token2;
   }
   // currently implements pre-authorization
   // TODO: support preAuth = false where it hooks on 401
@@ -17627,8 +17627,8 @@ class BearerCredentialHandler {
 }
 auth$1.BearerCredentialHandler = BearerCredentialHandler;
 class PersonalAccessTokenCredentialHandler {
-  constructor(token) {
-    this.token = token;
+  constructor(token2) {
+    this.token = token2;
   }
   // currently implements pre-authorization
   // TODO: support preAuth = false where it hooks on 401
@@ -17694,11 +17694,11 @@ function requireOidcUtils() {
       return new http_client_1.HttpClient("actions/oidc-client", [new auth_1.BearerCredentialHandler(OidcClient.getRequestToken())], requestOptions);
     }
     static getRequestToken() {
-      const token = process.env["ACTIONS_ID_TOKEN_REQUEST_TOKEN"];
-      if (!token) {
+      const token2 = process.env["ACTIONS_ID_TOKEN_REQUEST_TOKEN"];
+      if (!token2) {
         throw new Error("Unable to get ACTIONS_ID_TOKEN_REQUEST_TOKEN env variable");
       }
-      return token;
+      return token2;
     }
     static getIDTokenUrl() {
       const runtimeUrl = process.env["ACTIONS_ID_TOKEN_REQUEST_URL"];
@@ -19571,13 +19571,13 @@ Object.defineProperty(utils, "__esModule", { value: true });
 utils.getApiBaseUrl = utils.getProxyFetch = utils.getProxyAgentDispatcher = utils.getProxyAgent = utils.getAuthString = void 0;
 const httpClient = __importStar$1(lib);
 const undici_1 = undici;
-function getAuthString(token, options) {
-  if (!token && !options.auth) {
+function getAuthString(token2, options) {
+  if (!token2 && !options.auth) {
     throw new Error("Parameter token or opts.auth is required");
-  } else if (token && options.auth) {
+  } else if (token2 && options.auth) {
     throw new Error("Parameters token and opts.auth may not both be specified");
   }
-  return typeof options.auth === "string" ? options.auth : `token ${token}`;
+  return typeof options.auth === "string" ? options.auth : `token ${token2}`;
 }
 utils.getAuthString = getAuthString;
 function getProxyAgent(destinationUrl) {
@@ -20454,43 +20454,43 @@ function withCustomRequest(customRequest) {
 const REGEX_IS_INSTALLATION_LEGACY = /^v1\./;
 const REGEX_IS_INSTALLATION = /^ghs_/;
 const REGEX_IS_USER_TO_SERVER = /^ghu_/;
-async function auth(token) {
-  const isApp = token.split(/\./).length === 3;
-  const isInstallation = REGEX_IS_INSTALLATION_LEGACY.test(token) || REGEX_IS_INSTALLATION.test(token);
-  const isUserToServer = REGEX_IS_USER_TO_SERVER.test(token);
+async function auth(token2) {
+  const isApp = token2.split(/\./).length === 3;
+  const isInstallation = REGEX_IS_INSTALLATION_LEGACY.test(token2) || REGEX_IS_INSTALLATION.test(token2);
+  const isUserToServer = REGEX_IS_USER_TO_SERVER.test(token2);
   const tokenType = isApp ? "app" : isInstallation ? "installation" : isUserToServer ? "user-to-server" : "oauth";
   return {
     type: "token",
-    token,
+    token: token2,
     tokenType
   };
 }
-function withAuthorizationPrefix(token) {
-  if (token.split(/\./).length === 3) {
-    return `bearer ${token}`;
+function withAuthorizationPrefix(token2) {
+  if (token2.split(/\./).length === 3) {
+    return `bearer ${token2}`;
   }
-  return `token ${token}`;
+  return `token ${token2}`;
 }
-async function hook(token, request2, route, parameters) {
+async function hook(token2, request2, route, parameters) {
   const endpoint2 = request2.endpoint.merge(
     route,
     parameters
   );
-  endpoint2.headers.authorization = withAuthorizationPrefix(token);
+  endpoint2.headers.authorization = withAuthorizationPrefix(token2);
   return request2(endpoint2);
 }
-const createTokenAuth = function createTokenAuth2(token) {
-  if (!token) {
+const createTokenAuth = function createTokenAuth2(token2) {
+  if (!token2) {
     throw new Error("[@octokit/auth-token] No token passed to createTokenAuth");
   }
-  if (typeof token !== "string") {
+  if (typeof token2 !== "string") {
     throw new Error(
       "[@octokit/auth-token] Token passed to createTokenAuth is not a string"
     );
   }
-  token = token.replace(/^(token|bearer) +/i, "");
-  return Object.assign(auth.bind(null, token), {
-    hook: hook.bind(null, token)
+  token2 = token2.replace(/^(token|bearer) +/i, "");
+  return Object.assign(auth.bind(null, token2), {
+    hook: hook.bind(null, token2)
   });
 };
 var VERSION$2 = "5.2.2";
@@ -22670,7 +22670,7 @@ const handler = {
   set(target, methodName, value) {
     return target.cache[methodName] = value;
   },
-  get({ octokit, scope, cache: cache2 }, methodName) {
+  get({ octokit: octokit2, scope, cache: cache2 }, methodName) {
     if (cache2[methodName]) {
       return cache2[methodName];
     }
@@ -22681,27 +22681,27 @@ const handler = {
     const { endpointDefaults, decorations } = method;
     if (decorations) {
       cache2[methodName] = decorate(
-        octokit,
+        octokit2,
         scope,
         methodName,
         endpointDefaults,
         decorations
       );
     } else {
-      cache2[methodName] = octokit.request.defaults(endpointDefaults);
+      cache2[methodName] = octokit2.request.defaults(endpointDefaults);
     }
     return cache2[methodName];
   }
 };
-function endpointsToMethods(octokit) {
+function endpointsToMethods(octokit2) {
   const newMethods = {};
   for (const scope of endpointMethodsMap.keys()) {
-    newMethods[scope] = new Proxy({ octokit, scope, cache: {} }, handler);
+    newMethods[scope] = new Proxy({ octokit: octokit2, scope, cache: {} }, handler);
   }
   return newMethods;
 }
-function decorate(octokit, scope, methodName, defaults, decorations) {
-  const requestWithDefaults = octokit.request.defaults(defaults);
+function decorate(octokit2, scope, methodName, defaults, decorations) {
+  const requestWithDefaults = octokit2.request.defaults(defaults);
   function withDecorations(...args) {
     let options = requestWithDefaults.endpoint.merge(...args);
     if (decorations.mapToData) {
@@ -22713,12 +22713,12 @@ function decorate(octokit, scope, methodName, defaults, decorations) {
     }
     if (decorations.renamed) {
       const [newScope, newMethodName] = decorations.renamed;
-      octokit.log.warn(
+      octokit2.log.warn(
         `octokit.${scope}.${methodName}() has been renamed to octokit.${newScope}.${newMethodName}()`
       );
     }
     if (decorations.deprecated) {
-      octokit.log.warn(decorations.deprecated);
+      octokit2.log.warn(decorations.deprecated);
     }
     if (decorations.renamedParameters) {
       const options2 = requestWithDefaults.endpoint.merge(...args);
@@ -22726,7 +22726,7 @@ function decorate(octokit, scope, methodName, defaults, decorations) {
         decorations.renamedParameters
       )) {
         if (name in options2) {
-          octokit.log.warn(
+          octokit2.log.warn(
             `"${name}" parameter is deprecated for "octokit.${scope}.${methodName}()". Use "${alias}" instead`
           );
           if (!(alias in options2)) {
@@ -22741,15 +22741,15 @@ function decorate(octokit, scope, methodName, defaults, decorations) {
   }
   return Object.assign(withDecorations, requestWithDefaults);
 }
-function restEndpointMethods(octokit) {
-  const api2 = endpointsToMethods(octokit);
+function restEndpointMethods(octokit2) {
+  const api2 = endpointsToMethods(octokit2);
   return {
     rest: api2
   };
 }
 restEndpointMethods.VERSION = VERSION$1;
-function legacyRestEndpointMethods(octokit) {
-  const api2 = endpointsToMethods(octokit);
+function legacyRestEndpointMethods(octokit2) {
+  const api2 = endpointsToMethods(octokit2);
   return {
     ...api2,
     rest: api2
@@ -22791,9 +22791,9 @@ function normalizePaginatedListResponse(response2) {
   response2.data.total_count = totalCount;
   return response2;
 }
-function iterator(octokit, route, parameters) {
-  const options = typeof route === "function" ? route.endpoint(parameters) : octokit.request.endpoint(route, parameters);
-  const requestMethod = typeof route === "function" ? route : octokit.request;
+function iterator(octokit2, route, parameters) {
+  const options = typeof route === "function" ? route.endpoint(parameters) : octokit2.request.endpoint(route, parameters);
+  const requestMethod = typeof route === "function" ? route : octokit2.request;
   const method = options.method;
   const headers2 = options.headers;
   let url = options.url;
@@ -22825,19 +22825,19 @@ function iterator(octokit, route, parameters) {
     })
   };
 }
-function paginate(octokit, route, parameters, mapFn) {
+function paginate(octokit2, route, parameters, mapFn) {
   if (typeof parameters === "function") {
     mapFn = parameters;
     parameters = void 0;
   }
   return gather(
-    octokit,
+    octokit2,
     [],
-    iterator(octokit, route, parameters)[Symbol.asyncIterator](),
+    iterator(octokit2, route, parameters)[Symbol.asyncIterator](),
     mapFn
   );
 }
-function gather(octokit, results, iterator2, mapFn) {
+function gather(octokit2, results, iterator2, mapFn) {
   return iterator2.next().then((result) => {
     if (result.done) {
       return results;
@@ -22852,7 +22852,7 @@ function gather(octokit, results, iterator2, mapFn) {
     if (earlyExit) {
       return results;
     }
-    return gather(octokit, results, iterator2, mapFn);
+    return gather(octokit2, results, iterator2, mapFn);
   });
 }
 var composePaginateRest = Object.assign(paginate, {
@@ -23101,10 +23101,10 @@ function isPaginatingEndpoint(arg) {
     return false;
   }
 }
-function paginateRest(octokit) {
+function paginateRest(octokit2) {
   return {
-    paginate: Object.assign(paginate.bind(null, octokit), {
-      iterator: iterator.bind(null, octokit)
+    paginate: Object.assign(paginate.bind(null, octokit2), {
+      iterator: iterator.bind(null, octokit2)
     })
   };
 }
@@ -23162,9 +23162,9 @@ const require$$4 = /* @__PURE__ */ getAugmentedNamespace(distWeb);
     }
   };
   exports$1.GitHub = core_1.Octokit.plugin(plugin_rest_endpoint_methods_1.restEndpointMethods, plugin_paginate_rest_1.paginateRest).defaults(exports$1.defaults);
-  function getOctokitOptions(token, options) {
+  function getOctokitOptions(token2, options) {
     const opts = Object.assign({}, options || {});
-    const auth2 = Utils.getAuthString(token, opts);
+    const auth2 = Utils.getAuthString(token2, opts);
     if (auth2) {
       opts.auth = auth2;
     }
@@ -23204,78 +23204,61 @@ var getOctokit_1 = github.getOctokit = context = github.context = void 0;
 const Context2 = __importStar(context$1);
 const utils_1 = utils$1;
 var context = github.context = new Context2.Context();
-function getOctokit(token, options, ...additionalPlugins) {
+function getOctokit(token2, options, ...additionalPlugins) {
   const GitHubWithPlugins = utils_1.GitHub.plugin(...additionalPlugins);
-  return new GitHubWithPlugins((0, utils_1.getOctokitOptions)(token, options));
+  return new GitHubWithPlugins((0, utils_1.getOctokitOptions)(token2, options));
 }
 getOctokit_1 = github.getOctokit = getOctokit;
 var execExports = requireExec();
-function extractFilenamesFromConflicts(logText) {
-  const regex = /CONFLICT \(content\): Merge conflict in\s+([^\n]+)/g;
-  const matches = [];
-  let match;
-  while ((match = regex.exec(logText)) !== null) {
-    matches.push(match[1]);
+class StagingAutoMerge {
+  constructor(octokit2, logger = console, primaryBranch2, repo) {
+    if (!primaryBranch2) {
+      throw new Error("Primary branch is required.");
+    }
+    if (!repo?.owner || !repo?.repo) {
+      throw new Error("Repository owner and name are required.");
+    }
+    this.octokit = octokit2;
+    this.logger = logger;
+    this.primaryBranch = primaryBranch2;
+    this.repo = repo;
   }
-  return matches;
-}
-function formatCommentBody(mergeConflictMessage, consoleErrorMessage) {
-  const formattedConflictFiles = extractFilenamesFromConflicts(mergeConflictMessage).join("\n");
-  let conflictMessage = `Merge Conflicts in these files:
-${formattedConflictFiles}`;
-  if (consoleErrorMessage) {
-    conflictMessage += `
-
-Merge Command Error: ${consoleErrorMessage}`;
+  async run() {
+    await this.validateStagingLabel();
+    await this.configureGitUser();
+    await this.resetToPrimaryBranch();
+    await this.mergeStagedPullRequests();
+    await this.pushChanges();
+    await this.cleanupClosedPullRequests();
   }
-  return conflictMessage;
-}
-function hasStagingLabel(labels, stagingLabelName) {
-  return labels.some((label) => label.name.toLowerCase() === stagingLabelName.toLowerCase());
-}
-async function run() {
-  const token = coreExports.getInput("github-token", { required: true });
-  const primaryBranch = coreExports.getInput("primary-branch", { required: true });
-  const octokit = getOctokit_1(token);
-  await execExports.exec('git config --global user.email "github-actions@github.com"');
-  await execExports.exec('git config --global user.name "github-actions"');
-  await execExports.exec("git", ["reset", "--hard", `origin/${primaryBranch}`]);
-  async function findStagingLabelName() {
-    const repoLabels = await octokit.rest.issues.listLabelsForRepo({
-      owner: context.repo.owner,
-      repo: context.repo.repo
+  async configureGitUser() {
+    await this.exec('git config --global user.email "github-actions@github.com"');
+    await this.exec('git config --global user.name "github-actions"');
+  }
+  async resetToPrimaryBranch() {
+    await this.exec("git", ["reset", "--hard", `origin/${this.primaryBranch}`]);
+  }
+  async validateStagingLabel() {
+    this.stagingLabelName = await this.findStagingLabelName();
+    if (!this.stagingLabelName) {
+      throw new Error('Required label "Staging" was not found in this repository.');
+    }
+  }
+  async mergeStagedPullRequests() {
+    const pullRequests = await this.octokit.rest.pulls.list({
+      ...this.repo,
+      state: "open",
+      sort: "created",
+      direction: "asc"
     });
-    return repoLabels.data.find((label) => label.name.toLowerCase() === "staging")?.name;
-  }
-  async function removeStagingLabel(issueNumber, stagingLabelName2) {
-    if (!stagingLabelName2) return;
-    try {
-      await octokit.rest.issues.removeLabel({
-        owner: context.repo.owner,
-        repo: context.repo.repo,
-        issue_number: issueNumber,
-        name: stagingLabelName2
-      });
-    } catch (error) {
-      const status = error?.status;
-      if (status !== 404) {
-        throw error;
+    for (const pr of pullRequests.data) {
+      if (this.hasStagingLabel(pr.labels)) {
+        await this.mergePullRequest(pr);
       }
     }
   }
-  const stagingLabelName = await findStagingLabelName();
-  if (!stagingLabelName) {
-    const errorMessage = 'Required label "Staging" was not found in this repository.';
-    coreExports.error(errorMessage);
-    throw new Error(errorMessage);
-  }
-  const pullRequests = await octokit.rest.pulls.list({
-    ...context.repo,
-    state: "open",
-    sort: "created",
-    direction: "asc"
-  });
-  for (const pr of pullRequests.data) {
+  async mergePullRequest(pr) {
+    const { title, number, head: { ref: branch } } = pr;
     let execOutput = "";
     let execError = "";
     const options = {
@@ -23288,44 +23271,98 @@ async function run() {
         }
       }
     };
-    const {
-      title,
-      number,
-      labels,
-      head: { ref: branch }
-    } = pr;
-    if (hasStagingLabel(labels, stagingLabelName)) {
-      try {
-        await execExports.exec("git", ["merge", `origin/${branch}`, "--squash", "--verbose"], options);
-        await execExports.exec("git", ["commit", "-m", title]);
-      } catch (error) {
-        await execExports.exec("git restore --staged .");
-        await execExports.exec("git restore .");
-        await execExports.exec("git clean -df");
-        await octokit.rest.issues.createComment({
-          owner: context.repo.owner,
-          repo: context.repo.repo,
-          issue_number: number,
-          body: formatCommentBody(execOutput, execError)
-        });
-        await removeStagingLabel(number, stagingLabelName);
+    try {
+      await this.exec("git", ["merge", `origin/${branch}`, "--squash", "--verbose"], options);
+      await this.exec("git", ["commit", "-m", title]);
+    } catch (error) {
+      await this.abortMerge();
+      await this.createMergeConflictComment(number, execOutput, execError);
+      await this.removeStagingLabel(number);
+    }
+  }
+  async abortMerge() {
+    await this.exec("git restore --staged .");
+    await this.exec("git restore .");
+    await this.exec("git clean -df");
+  }
+  async pushChanges() {
+    await this.exec("git push --force");
+  }
+  async cleanupClosedPullRequests() {
+    const closedPullRequests = await this.octokit.rest.pulls.list({
+      ...this.repo,
+      state: "closed",
+      sort: "created",
+      direction: "desc"
+    });
+    this.logger.info("Label Name: ", this.stagingLabelName);
+    for (const closedPr of closedPullRequests.data) {
+      if (this.hasStagingLabel(closedPr.labels)) {
+        this.logger.info("removing label from: ", closedPr.title);
+        await this.removeStagingLabel(closedPr.number);
       }
     }
   }
-  await execExports.exec("git push --force");
-  const closedPullRequests = await octokit.rest.pulls.list({
-    ...context.repo,
-    state: "closed",
-    sort: "created",
-    direction: "desc"
-  });
-  console.log("Label Name: ", stagingLabelName);
-  for (const closedPr of closedPullRequests.data) {
-    const { number, labels, title } = closedPr;
-    if (hasStagingLabel(labels, stagingLabelName)) {
-      console.log("removing label from: ", title);
-      await removeStagingLabel(number, stagingLabelName);
+  async exec(command2, args, options) {
+    return execExports.exec(command2, args, options);
+  }
+  extractFilenamesFromConflicts(logText) {
+    const regex = /CONFLICT \(content\): Merge conflict in\s+([^\n]+)/g;
+    const matches = [];
+    let match;
+    while ((match = regex.exec(logText)) !== null) {
+      matches.push(match[1]);
+    }
+    return matches;
+  }
+  formatCommentBody(mergeConflictMessage, consoleErrorMessage) {
+    const formattedConflictFiles = this.extractFilenamesFromConflicts(mergeConflictMessage).join("\n");
+    let conflictMessage = `Merge Conflicts in these files:
+${formattedConflictFiles}`;
+    if (consoleErrorMessage) {
+      conflictMessage += `
+
+Merge Command Error: ${consoleErrorMessage}`;
+    }
+    return conflictMessage;
+  }
+  hasStagingLabel(labels) {
+    return labels.some((label) => label.name.toLowerCase() === this.stagingLabelName.toLowerCase());
+  }
+  async findStagingLabelName() {
+    const repoLabels = await this.octokit.rest.issues.listLabelsForRepo({
+      owner: this.repo.owner,
+      repo: this.repo.repo
+    });
+    return repoLabels.data.find((label) => label.name.toLowerCase() === "staging")?.name;
+  }
+  async removeStagingLabel(issueNumber) {
+    if (!this.stagingLabelName) return;
+    try {
+      await this.octokit.rest.issues.removeLabel({
+        owner: this.repo.owner,
+        repo: this.repo.repo,
+        issue_number: issueNumber,
+        name: this.stagingLabelName
+      });
+    } catch (error) {
+      const status = error?.status;
+      if (status !== 404) {
+        throw error;
+      }
     }
   }
+  async createMergeConflictComment(issueNumber, execOutput, execError) {
+    await this.octokit.rest.issues.createComment({
+      owner: this.repo.owner,
+      repo: this.repo.repo,
+      issue_number: issueNumber,
+      body: this.formatCommentBody(execOutput, execError)
+    });
+  }
 }
-run().catch(coreExports.setFailed);
+const token = coreExports.getInput("github-token", { required: true });
+const primaryBranch = coreExports.getInput("primary-branch", { required: true });
+const octokit = getOctokit_1(token);
+const stagingAutoMerge = new StagingAutoMerge(octokit, console, primaryBranch, context.repo);
+stagingAutoMerge.run().catch(coreExports.setFailed);
