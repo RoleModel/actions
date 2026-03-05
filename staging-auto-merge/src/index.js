@@ -1,4 +1,5 @@
 import * as core from '@actions/core'
-import { run } from './main.js'
+import StagingAutoMerge from './staging-auto-merge.js'
 
-run().catch(core.setFailed)
+const stagingAutoMerge = new StagingAutoMerge()
+stagingAutoMerge.run().catch(core.setFailed)
