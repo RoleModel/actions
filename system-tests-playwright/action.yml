@@ -1,0 +1,94 @@
+name: Ruby System Tests
+description: Runs Ruby system tests
+inputs:
+  failure-screenshot-dir:
+    description: the directory where your test runner saves screenshots on failure
+    required: false
+    default: tmp/capybara
+
+runs:
+  using: composite
+  steps:
+    - name: Enable Corepack
+      shell: bash
+      run: corepack enable
+
+    - name: Setup Node
+      uses: actions/setup-node@v6
+      with:
+        node-version-file: .node-version
+        cache: yarn
+
+    - name: Run Yarn Install
+      shell: bash
+      run: yarn install --immutable
+
+    - name: Cache Playwright Chromium browser
+      id: playwright-cache
+      uses: actions/cache@v5
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-browsers-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+
+    - name: Setup Playwright
+      if: steps.playwright-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: yarn playwright install chromium
+
+    - name: Install Ruby and Gems
+      uses: ruby/setup-ruby@v1
+      with:
+        bundler-cache: true
+
+    - name: Retrieve Cached Rails Assets
+      id: cache-assets
+      uses: actions/cache/restore@v5
+      with:
+        path: |
+          public/assets
+          app/assets/builds
+        key: rails-assets-${{ hashFiles('app/assets/images/**/*', 'app/assets/stylesheets/**/*', 'app/javascript/**/*', 'yarn.lock', 'Gemfile.lock') }}
+        fail-on-cache-miss: true
+
+    - name: Load Previous Turbo-Test Runtime Stats
+      id: restore-parallel-spec
+      uses: actions/cache/restore@v5
+      with:
+        path: tmp/turbo_rspec_runtime.log
+        key: parallel-spec-system-runtimes-${{ github.sha }}_${{ github.run_attempt }}
+        restore-keys: parallel-spec-system-runtimes-
+
+    - name: Setup Parallel Databases
+      shell: bash
+      run: bundle exec rake parallel:create parallel:load_schema
+
+    - name: Run Rspec Tests
+      shell: bash
+      run: bundle exec parallel_rspec --verbose-command spec/system
+      env:
+        CAPYBARA_DRIVER: js
+
+    - name: Publish Test Results
+      uses: mikepenz/action-junit-report@v6
+      if: success() || failure()
+      with:
+        check_name: Test Results
+        report_paths: tmp/rspec-*.xml
+        detailed_summary: true
+
+    - name: Analyze Test Runtimes
+      uses: RoleModel/actions/test-runtime-analyzer@v1
+      with:
+        test-output-path: tmp/turbo_rspec_runtime.log
+
+    - name: Upload Screenshots
+      if: failure()
+      uses: actions/upload-artifact@v6
+      with:
+        name: rspec-screenshots
+        path: ${{ inputs.failure-screenshot-dir }}
+
+    - name: Cleanup
+      uses: RoleModel/actions/test-cleanup@v1
+      with:
+        artifact-prefix: rspec-system
