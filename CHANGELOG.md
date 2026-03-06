@@ -1,5 +1,9 @@
 # RoleModel/actions
 
+## [v3.3.0] Mar 6, 2026
+
+Add a new system tests action that installs playwright instead of installing google chrome manually.
+
 ## [v3.2.0] Mar 5, 2026
 
 - Add new `staging-auto-merge` action, migrated from https://github.com/RoleModel/staging-auto-merge.
