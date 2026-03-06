@@ -1,0 +1,40 @@
+name: staging-auto-merge-ci
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - staging-auto-merge/**
+      - .github/workflows/staging-auto-merge-ci.yml
+  pull_request:
+    paths:
+      - staging-auto-merge/**
+      - .github/workflows/staging-auto-merge-ci.yml
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: staging-auto-merge/.node-version
+          cache: npm
+          cache-dependency-path: staging-auto-merge/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: staging-auto-merge
+
+      - name: Run tests
+        run: npm test
+        working-directory: staging-auto-merge
+
+      - name: Build action
+        run: npm run build
+        working-directory: staging-auto-merge
+
+      - name: Verify dist is up to date
+        run: git diff --exit-code -- staging-auto-merge/dist

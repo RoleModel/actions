@@ -1,0 +1,20 @@
+{
+  "name": "staging-auto-merge",
+  "version": "1.0.0",
+  "description": "GitHub Action to maintain a staging branch from labeled pull requests",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "test": "vitest",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@actions/exec": "^1.1.1",
+    "@actions/github": "^6.0.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "vitest": "^1.0.0"
+  }
+}
