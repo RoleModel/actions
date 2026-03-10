@@ -1,6 +1,11 @@
 name: Ruby System Tests
 description: Runs Ruby system tests
 inputs:
+  web-driver:
+    description: Supported values are 'selenium' and 'playwright'
+    required: false
+    default: selenium
+
   failure-screenshot-dir:
     description: the directory where your test runner saves screenshots on failure
     required: false
@@ -9,10 +14,6 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Setup Chrome
-      uses: browser-actions/setup-chrome@v2
-      id: setup-chrome
-
     - name: Enable Corepack
       shell: bash
       run: corepack enable
@@ -26,6 +27,24 @@ runs:
     - name: Run Yarn Install
       shell: bash
       run: yarn install --immutable
+
+    - name: Check Playwright Cache
+      if: inputs.web-driver == 'playwright'
+      uses: actions/cache@v5
+      id: playwright-cache
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-browsers-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+
+    - name: Setup Playwright
+      if: inputs.web-driver == 'playwright' && steps.playwright-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: yarn playwright install chromium
+
+    - name: Setup Chrome
+      if: inputs.web-driver != 'playwright'
+      uses: browser-actions/setup-chrome@v2
+      id: setup-chrome
 
     - name: Install Ruby and Gems
       uses: ruby/setup-ruby@v1
@@ -58,7 +77,7 @@ runs:
       shell: bash
       run: bundle exec parallel_rspec --verbose-command spec/system
       env:
-        GOOGLE_CHROME_BIN: ${{ steps.setup-chrome.outputs.chrome-path }}
+        GOOGLE_CHROME_BIN: ${{ case(inputs.web-driver != 'playwright', steps.setup-chrome.outputs.chrome-path, '') }}
         CAPYBARA_DRIVER: js
 
     - name: Publish Test Results
