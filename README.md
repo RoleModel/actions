@@ -87,11 +87,11 @@ This is a combination of multiple composite actions that can be used to run your
 
 ### Inputs, by composit action name
 
-- `non-system-test`:
-  - `linting-step-required`
+- `linting-and-non-system-tests`:
+  - `linting_step_required`
     - Whether linting is required
     - Optional, default is `false`
-  - `linting-step-command`
+  - `linting_step_command`
     - Command for linting (e.g., "bundle exec rubocop")
     - Optional, default is `''`
   - `needs-compiled-assets`
