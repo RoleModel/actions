@@ -1,5 +1,11 @@
 # RoleModel/actions
 
+## [v3.3.0] Mar 11, 2026
+
+- Add optional `web-driver` input to `system-tests` action.
+  - default value is `selenium`
+  - `playwright` is also supported
+
 ## [v3.2.0] Mar 5, 2026
 
 - Add new `staging-auto-merge` action, migrated from https://github.com/RoleModel/staging-auto-merge.
@@ -45,6 +51,7 @@ New Composite Actions:
 - Add `test-cleanup` action to save logs
 - Add `test-runtime-analyzer` action to post test runtimes
 
+[v3.3.0]: https://github.com/RoleModel/actions/releases/tag/v3.3.0
 [v3.2.0]: https://github.com/RoleModel/actions/releases/tag/v3.2.0
 [v3.1.0]: https://github.com/RoleModel/actions/releases/tag/v3.1.0
 [v3.0.0]: https://github.com/RoleModel/actions/releases/tag/v3.0.0

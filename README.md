@@ -85,12 +85,27 @@ jobs:
 
 This is a combination of multiple composite actions that can be used to run your entire CI flow for a rails app using parallel_tests. Each action allow you to customize the machine, environment variables, and any custom install steps that are needed. It does require you to check out the code yourself, since some install steps might happen after that.
 
-The only inputs are for the linting and non system test action. Neither are required:
+### Inputs, by composit action name
 
-- `linting-step-required`: Boolean (default is false). Only needed if you have a linting command
-- `linting-step-command`: String, `bundle exec rubocop --fail-level warning --display-only-fail-level-offenses --format github`
+- `non-system-test`:
+  - `linting-step-required`
+    - Whether linting is required
+    - Optional, default is `false`
+  - `linting-step-command`
+    - Command for linting (e.g., "bundle exec rubocop")
+    - Optional, default is `''`
+  - `needs-compiled-assets`
+    - Whether to retrieve the Rails asset cache (set to false if your workflow does not depend on the compile-assets workflow)
+    - Optional, default is `true`
+- `system-tests`:
+  - `web-driver`
+    - Supported values are 'selenium' and 'playwright'
+    - Optional, default is `selenium`
+  - `failure-screenshot-dir`
+    - the directory where your test runner saves screenshots on failure
+    - Optional, default is `tmp/capybara`
 
-Here's what your `ci.yml` file could look like
+### Example ci.yml workflow
 
 ```yaml
 name: CI
@@ -173,10 +188,9 @@ jobs:
           sudo apt-get install -y libvips
 
       - uses: RoleModel/actions/system-tests@v3
-        # if you've configured capybara to be compatible with the tmp:clear task
-        # you can tell the system-tests action like this:
         with:
-          failure-screenshot-dir: tmp/screenshots
+          failure-screenshot-dir: tmp/screenshots # if you've configured capybara to be compatible with the tmp:clear task
+          web-driver: playwright # remove this input to use the default value (selenium)
   # completely optional job (for Rails projects only) - outputs a stats table in your workflow's summary page
   project-stats:
     name: Project Stats
