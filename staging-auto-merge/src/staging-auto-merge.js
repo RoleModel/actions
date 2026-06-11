@@ -77,6 +77,7 @@ export default class StagingAutoMerge {
     try {
       await this.exec('git', ['merge', `origin/${branch}`, '--squash', '--verbose'], options)
       await this.exec('git', ['commit', '-m', title])
+      await this.removeStagingLabel(number)
     } catch (error) {
       await this.abortMerge()
       await this.createMergeConflictComment(number, execOutput, execError)

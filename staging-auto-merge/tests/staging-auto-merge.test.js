@@ -67,6 +67,12 @@ describe('StagingAutoMerge', () => {
       expect(octokit.rest.issues.removeLabel).toHaveBeenCalledWith({
         owner: 'rolemodel',
         repo: 'actions',
+        issue_number: 12,
+        name: 'Staging',
+      })
+      expect(octokit.rest.issues.removeLabel).toHaveBeenCalledWith({
+        owner: 'rolemodel',
+        repo: 'actions',
         issue_number: 99,
         name: 'Staging',
       })
