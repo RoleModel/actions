@@ -1,6 +1,7 @@
 import StagingAutoMerge from '../src/staging-auto-merge.js'
 
 const createOctokit = () => ({
+  paginate: vi.fn(),
   rest: {
     issues: {
       listLabelsForRepo: vi.fn(),
@@ -47,9 +48,8 @@ describe('StagingAutoMerge', () => {
         },
       ]
 
-      octokit.rest.pulls.list.mockImplementation(({ state }) =>
-        Promise.resolve({ data: state === 'open' ? openPulls : closedPulls }),
-      )
+      octokit.rest.pulls.list.mockResolvedValue({ data: openPulls })
+      octokit.paginate.mockResolvedValue(closedPulls)
 
       const stagingAutoMerge = new StagingAutoMerge(octokit, primaryBranch, repo, logger)
       const execMock = vi.fn().mockResolvedValue(undefined)
@@ -64,12 +64,9 @@ describe('StagingAutoMerge', () => {
       )
       expect(execMock).toHaveBeenCalledWith('git', ['commit', '-m', 'Add feature'])
       expect(octokit.rest.issues.createComment).not.toHaveBeenCalled()
-      expect(octokit.rest.issues.removeLabel).toHaveBeenCalledWith({
-        owner: 'rolemodel',
-        repo: 'actions',
-        issue_number: 12,
-        name: 'Staging',
-      })
+      expect(octokit.rest.issues.removeLabel).not.toHaveBeenCalledWith(
+        expect.objectContaining({ issue_number: 12 }),
+      )
       expect(octokit.rest.issues.removeLabel).toHaveBeenCalledWith({
         owner: 'rolemodel',
         repo: 'actions',
@@ -88,9 +85,8 @@ describe('StagingAutoMerge', () => {
         },
       ]
 
-      octokit.rest.pulls.list.mockImplementation(({ state }) =>
-        Promise.resolve({ data: state === 'open' ? openPulls : [] }),
-      )
+      octokit.rest.pulls.list.mockResolvedValue({ data: openPulls })
+      octokit.paginate.mockResolvedValue([])
 
       const stagingAutoMerge = new StagingAutoMerge(octokit, primaryBranch, repo, logger)
       const execMock = vi.fn(async (command, args, options) => {

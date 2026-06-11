@@ -77,7 +77,6 @@ export default class StagingAutoMerge {
     try {
       await this.exec('git', ['merge', `origin/${branch}`, '--squash', '--verbose'], options)
       await this.exec('git', ['commit', '-m', title])
-      await this.removeStagingLabel(number)
     } catch (error) {
       await this.abortMerge()
       await this.createMergeConflictComment(number, execOutput, execError)
@@ -96,14 +95,13 @@ export default class StagingAutoMerge {
   }
 
   async cleanupClosedPullRequests() {
-    const closedPullRequests = await this.octokit.rest.pulls.list({
+    const closedPullRequests = await this.octokit.paginate(this.octokit.rest.pulls.list, {
       ...this.repo,
       state: 'closed',
-      sort: 'created',
-      direction: 'desc',
+      per_page: 100,
     })
 
-    for (const closedPr of closedPullRequests.data) {
+    for (const closedPr of closedPullRequests) {
       if (this.hasStagingLabel(closedPr.labels)) {
         this.logger.info('removing label from: ', closedPr.title)
         await this.removeStagingLabel(closedPr.number)
