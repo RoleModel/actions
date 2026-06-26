@@ -17,11 +17,9 @@ on:
       rubocop_command:
         description: Rubocop command to run (omit to skip)
         type: string
-        default: bundle exec rubocop --fail-level warning --display-only-fail-level-offenses --format github
       dependency_audit_command:
         description: Dependency audit command to run (omit to skip)
         type: string
-        default: bundle exec bundle-audit update && bundle exec bundle-audit check
       js_lint_command:
         description: JS linting command to run (omit to skip)
         type: string
