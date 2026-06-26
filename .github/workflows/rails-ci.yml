@@ -36,6 +36,8 @@ jobs:
     name: CI
     runs-on: ${{ inputs.runner }}
     timeout-minutes: ${{ inputs.timeout }}
+    permissions:
+      checks: write
     env:
       RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
       BUNDLE_RUBYGEMS__PKG__GITHUB__COM: ${{ secrets.GITHUB_TOKEN }}
