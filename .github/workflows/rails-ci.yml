@@ -38,6 +38,7 @@ jobs:
     timeout-minutes: ${{ inputs.timeout }}
     env:
       RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
+      BUNDLE_RUBYGEMS__PKG__GITHUB__COM: ${{ secrets.BUNDLE_RUBYGEMS__PKG__GITHUB__COM }}
 
     services:
       postgres:
