@@ -23,6 +23,10 @@ on:
       js_lint_command:
         description: JS linting command to run (omit to skip)
         type: string
+      postgres_version:
+        description: Postgres Docker image version tag
+        type: string
+        default: "17"
 env:
   BUNDLE_WITHOUT: production
   CI: true
@@ -45,7 +49,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16
+        image: postgres:${{ inputs.postgres_version }}
         ports:
           - "5432:5432"
         env:
