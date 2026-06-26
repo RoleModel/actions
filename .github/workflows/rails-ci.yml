@@ -1,0 +1,152 @@
+name: Rails CI
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        description: Runner to use
+        type: string
+        default: blacksmith-8vcpu-ubuntu-2404
+      timeout:
+        description: Job timeout in minutes
+        type: number
+        default: 20
+      apt_packages:
+        description: Space-separated apt packages to install alongside setup (e.g. "libvips")
+        type: string
+        default: ""
+      rubocop_command:
+        description: Rubocop command to run (leave empty to skip)
+        type: string
+        default: bundle exec rubocop --fail-level warning --display-only-fail-level-offenses --format github
+      run_bundle_audit:
+        description: Whether to run bundle-audit
+        type: boolean
+        default: true
+      js_lint_command:
+        description: JS linting command to run (leave empty to skip)
+        type: string
+        default: ""
+      production_host:
+        description: PRODUCTION_HOST for system tests
+        type: string
+        default: http://localhost:3000
+    secrets:
+      rails_master_key:
+        required: true
+
+env:
+  BUNDLE_WITHOUT: production
+  CI: true
+  RAILS_ENV: test
+  POSTGRES_USER: postgres
+  POSTGRES_PASSWORD: password
+  PARALLEL_TEST_FIRST_IS_1: false
+  RAILS_MASTER_KEY: ${{ secrets.rails_master_key }}
+  PRODUCTION_HOST: ${{ inputs.production_host }}
+
+jobs:
+  ci:
+    name: CI
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: ${{ inputs.timeout }}
+
+    services:
+      postgres:
+        image: postgres:16
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      # Ruby/gems and apt packages background immediately; corepack → node → yarn
+      # chain in the foreground so yarn install can overlap with the slow installs.
+      - name: Install Ruby and Gems
+        id: install-ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+        background: true
+
+      - name: Install system packages
+        id: install-apt
+        if: ${{ inputs.apt_packages != '' }}
+        run: sudo apt-get update && sudo apt-get install -y ${{ inputs.apt_packages }}
+        background: true
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: yarn
+
+      - name: Install Yarn Packages
+        id: yarn-install
+        run: yarn install --immutable
+        background: true
+
+      - wait-all:
+
+      - parallel:
+          - name: Compile Assets
+            run: bundle exec rails assets:precompile
+
+          - name: Rubocop
+            if: ${{ inputs.rubocop_command != '' }}
+            run: ${{ inputs.rubocop_command }}
+
+          - name: Bundle Audit
+            if: ${{ inputs.run_bundle_audit }}
+            run: bundle exec bundle-audit update && bundle exec bundle-audit check
+
+          - name: ESLint
+            if: ${{ inputs.js_lint_command != '' }}
+            run: ${{ inputs.js_lint_command }}
+
+      - name: Load Previous Turbo-Test Runtime Stats
+        uses: actions/cache/restore@v6
+        with:
+          path: tmp/turbo_rspec_runtime.log
+          key: parallel-spec-runtimes-${{ github.sha }}_${{ github.run_attempt }}
+          restore-keys: parallel-spec-runtimes-
+
+      - name: Setup Parallel Databases
+        run: bundle exec rake parallel:create parallel:load_schema
+
+      - name: Run Rspec Tests
+        run: bundle exec parallel_rspec --verbose spec/
+        env:
+          CAPYBARA_DRIVER: js
+
+      - name: Publish Test Results
+        uses: mikepenz/action-junit-report@v6
+        if: success() || failure()
+        with:
+          check_name: Test Results
+          report_paths: tmp/rspec-*.xml
+          detailed_summary: true
+
+      - name: Analyze Test Runtimes
+        uses: RoleModel/actions/test-runtime-analyzer@v1
+        with:
+          test-output-path: tmp/turbo_rspec_runtime.log
+
+      - name: Upload Screenshots
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: rspec-screenshots
+          path: tmp/capybara
+
+      - name: Cleanup
+        uses: RoleModel/actions/test-cleanup@v1
+        with:
+          artifact-prefix: rspec
