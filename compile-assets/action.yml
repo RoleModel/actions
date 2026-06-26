@@ -39,16 +39,21 @@ runs:
         node-version-file: .node-version
         cache: yarn
 
-    - name: Wait for Ruby installation
+    - name: Run Yarn Install
       if: ${{ steps.check-asset-cache.outputs.cache-hit != 'true' }}
-      wait: install-ruby
+      id: yarn-install
+      shell: bash
+      run: yarn install --immutable
+      background: true
+
+    - name: Wait for Ruby and Yarn
+      if: ${{ steps.check-asset-cache.outputs.cache-hit != 'true' }}
+      wait: [install-ruby, yarn-install]
 
     - name: Build Assets
       if: ${{ steps.check-asset-cache.outputs.cache-hit != 'true' }}
       shell: bash
-      run: |
-        yarn install --immutable
-        bundle exec rails assets:precompile
+      run: bundle exec rails assets:precompile
 
     - name: Cache Rails Precompiled Assets
       if: ${{ steps.check-asset-cache.outputs.cache-hit != 'true' }}
