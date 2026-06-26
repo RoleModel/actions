@@ -14,19 +14,17 @@ on:
       apt_packages:
         description: Space-separated apt packages to install alongside setup (e.g. "libvips")
         type: string
-        default: ""
       rubocop_command:
-        description: Rubocop command to run (leave empty to skip)
+        description: Rubocop command to run (omit to skip)
         type: string
         default: bundle exec rubocop --fail-level warning --display-only-fail-level-offenses --format github
-      run_bundle_audit:
-        description: Whether to run bundle-audit
-        type: boolean
-        default: true
-      js_lint_command:
-        description: JS linting command to run (leave empty to skip)
+      dependency_audit_command:
+        description: Dependency audit command to run (omit to skip)
         type: string
-        default: ""
+        default: bundle exec bundle-audit update && bundle exec bundle-audit check
+      js_lint_command:
+        description: JS linting command to run (omit to skip)
+        type: string
 env:
   BUNDLE_WITHOUT: production
   CI: true
@@ -67,7 +65,7 @@ jobs:
 
       - name: Install system packages
         id: install-apt
-        if: ${{ inputs.apt_packages != '' }}
+        if: ${{ inputs.apt_packages }}
         run: sudo apt-get update && sudo apt-get install -y ${{ inputs.apt_packages }}
         background: true
 
@@ -92,15 +90,15 @@ jobs:
             run: bundle exec rails assets:precompile
 
           - name: Rubocop
-            if: ${{ inputs.rubocop_command != '' }}
+            if: ${{ inputs.rubocop_command }}
             run: ${{ inputs.rubocop_command }}
 
-          - name: Bundle Audit
-            if: ${{ inputs.run_bundle_audit }}
-            run: bundle exec bundle-audit update && bundle exec bundle-audit check
+          - name: Dependency Audit
+            if: ${{ inputs.dependency_audit_command }}
+            run: ${{ inputs.dependency_audit_command }}
 
           - name: ESLint
-            if: ${{ inputs.js_lint_command != '' }}
+            if: ${{ inputs.js_lint_command }}
             run: ${{ inputs.js_lint_command }}
 
       - name: Load Previous Turbo-Test Runtime Stats
@@ -120,7 +118,7 @@ jobs:
 
       - name: Publish Test Results
         uses: mikepenz/action-junit-report@v6
-        if: success() || failure()
+        if: always()
         with:
           check_name: Test Results
           report_paths: tmp/rspec-*.xml
