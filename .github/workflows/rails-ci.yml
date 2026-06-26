@@ -117,21 +117,22 @@ jobs:
             if: ${{ inputs.js_lint_command }}
             run: ${{ inputs.js_lint_command }}
 
-      - name: Save Asset Cache
-        if: steps.cache-assets.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v6
-        with:
-          path: |
-            public/assets
-            app/assets/builds
-          key: ${{ steps.cache-assets.outputs.cache-primary-key }}
+      - parallel:
+          - name: Save Asset Cache
+            if: steps.cache-assets.outputs.cache-hit != 'true'
+            uses: actions/cache/save@v6
+            with:
+              path: |
+                public/assets
+                app/assets/builds
+              key: ${{ steps.cache-assets.outputs.cache-primary-key }}
 
-      - name: Load Previous Turbo-Test Runtime Stats
-        uses: actions/cache/restore@v6
-        with:
-          path: tmp/turbo_rspec_runtime.log
-          key: parallel-spec-runtimes-${{ github.sha }}_${{ github.run_attempt }}
-          restore-keys: parallel-spec-runtimes-
+          - name: Load Previous Turbo-Test Runtime Stats
+            uses: actions/cache/restore@v6
+            with:
+              path: tmp/turbo_rspec_runtime.log
+              key: parallel-spec-runtimes-${{ github.sha }}_${{ github.run_attempt }}
+              restore-keys: parallel-spec-runtimes-
 
       - name: Run Rspec Tests
         run: bundle exec parallel_rspec --verbose spec/
