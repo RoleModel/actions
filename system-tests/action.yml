@@ -38,8 +38,10 @@ runs:
       background: true
 
     - name: Run Yarn Install
+      id: yarn-install
       shell: bash
       run: yarn install --immutable
+      background: true
 
     - name: Check Playwright Cache
       if: inputs.web-driver == 'playwright'

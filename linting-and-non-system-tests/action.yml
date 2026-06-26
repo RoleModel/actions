@@ -50,8 +50,10 @@ runs:
         cache: yarn
 
     - name: Run Yarn Install
+      id: yarn-install
       shell: bash
       run: yarn install --immutable
+      background: true
 
     - name: Wait for background setup
       wait-all:
