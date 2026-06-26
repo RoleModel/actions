@@ -24,6 +24,14 @@ runs:
       shell: bash
       run: corepack enable
 
+    - name: Install Ruby and Gems
+      if: ${{ steps.check-asset-cache.outputs.cache-hit != 'true' }}
+      id: install-ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        bundler-cache: true
+      background: true
+
     - name: Setup Node
       if: ${{ steps.check-asset-cache.outputs.cache-hit != 'true' }}
       uses: actions/setup-node@v6
@@ -31,11 +39,9 @@ runs:
         node-version-file: .node-version
         cache: yarn
 
-    - name: Install Ruby and Gems
+    - name: Wait for Ruby installation
       if: ${{ steps.check-asset-cache.outputs.cache-hit != 'true' }}
-      uses: ruby/setup-ruby@v1
-      with:
-        bundler-cache: true
+      wait: install-ruby
 
     - name: Build Assets
       if: ${{ steps.check-asset-cache.outputs.cache-hit != 'true' }}

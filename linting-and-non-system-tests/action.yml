@@ -9,6 +9,14 @@ inputs:
     description: Command for linting (e.g., "bundle exec rubocop")
     required: false
     default: ''
+  linting_step_command_2:
+    description: Second linting command run in parallel with linting_step_command
+    required: false
+    default: ''
+  apt_packages:
+    description: Space-separated apt packages to install alongside Ruby and Node setup (e.g., "libvips")
+    required: false
+    default: ''
   needs-compiled-assets:
     description: Whether to retrieve the Rails asset cache (set to false if your workflow does not depend on the compile-assets workflow)
     required: false
@@ -21,6 +29,20 @@ runs:
       shell: bash
       run: corepack enable
 
+    - name: Install Ruby and Gems
+      id: install-ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        bundler-cache: true
+      background: true
+
+    - name: Install system packages
+      if: ${{ inputs.apt_packages != '' }}
+      id: install-apt
+      shell: bash
+      run: sudo apt-get update && sudo apt-get install -y ${{ inputs.apt_packages }}
+      background: true
+
     - name: Setup Node
       uses: actions/setup-node@v6
       with:
@@ -31,10 +53,8 @@ runs:
       shell: bash
       run: yarn install --immutable
 
-    - name: Install Ruby and Gems
-      uses: ruby/setup-ruby@v1
-      with:
-        bundler-cache: true
+    - name: Wait for background setup
+      wait-all:
 
     - name: Retrieve Cached Rails Assets
       id: cache-assets
@@ -59,10 +79,15 @@ runs:
       shell: bash
       run: bundle exec rake parallel:create parallel:load_schema
 
-    - name: Linting
-      if: ${{ inputs.linting_step_required == 'true' }}
-      shell: bash
-      run: ${{ inputs.linting_step_command }}
+    - parallel:
+        - name: Linting
+          if: ${{ inputs.linting_step_required == 'true' && inputs.linting_step_command != '' }}
+          shell: bash
+          run: ${{ inputs.linting_step_command }}
+        - name: Linting (secondary)
+          if: ${{ inputs.linting_step_required == 'true' && inputs.linting_step_command_2 != '' }}
+          shell: bash
+          run: ${{ inputs.linting_step_command_2 }}
 
     - name: Run Rspec Tests
       shell: bash
