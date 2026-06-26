@@ -46,12 +46,9 @@ runs:
       run: yarn install --immutable
       background: true
 
-    - name: Wait for Ruby and Yarn
-      if: ${{ steps.check-asset-cache.outputs.cache-hit != 'true' }}
-      wait: [install-ruby, yarn-install]
-
     - name: Build Assets
       if: ${{ steps.check-asset-cache.outputs.cache-hit != 'true' }}
+      wait: [install-ruby, yarn-install]
       shell: bash
       run: bundle exec rails assets:precompile
 
