@@ -101,6 +101,9 @@ jobs:
             if: ${{ steps.cache-assets.outputs.cache-hit != 'true' }}
             run: bundle exec rails assets:precompile
 
+          - name: Setup Parallel Databases
+            run: bundle exec rake parallel:create parallel:load_schema
+
           - name: Rubocop
             if: ${{ inputs.rubocop_command }}
             run: ${{ inputs.rubocop_command }}
@@ -128,9 +131,6 @@ jobs:
           path: tmp/turbo_rspec_runtime.log
           key: parallel-spec-runtimes-${{ github.sha }}_${{ github.run_attempt }}
           restore-keys: parallel-spec-runtimes-
-
-      - name: Setup Parallel Databases
-        run: bundle exec rake parallel:create parallel:load_schema
 
       - name: Run Rspec Tests
         run: bundle exec parallel_rspec --verbose spec/
