@@ -87,8 +87,18 @@ jobs:
 
       - wait-all:
 
+      - name: Restore Asset Cache
+        id: cache-assets
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            public/assets
+            app/assets/builds
+          key: rails-assets-${{ hashFiles('app/assets/images/**/*', 'app/assets/stylesheets/**/*', 'app/javascript/**/*', 'yarn.lock', 'Gemfile.lock') }}
+
       - parallel:
           - name: Compile Assets
+            if: ${{ steps.cache-assets.outputs.cache-hit != 'true' }}
             run: bundle exec rails assets:precompile
 
           - name: Rubocop
@@ -102,6 +112,15 @@ jobs:
           - name: ESLint
             if: ${{ inputs.js_lint_command }}
             run: ${{ inputs.js_lint_command }}
+
+      - name: Save Asset Cache
+        if: steps.cache-assets.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            public/assets
+            app/assets/builds
+          key: ${{ steps.cache-assets.outputs.cache-primary-key }}
 
       - name: Load Previous Turbo-Test Runtime Stats
         uses: actions/cache/restore@v6
