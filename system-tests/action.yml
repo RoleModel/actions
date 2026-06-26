@@ -18,30 +18,15 @@ runs:
       shell: bash
       run: corepack enable
 
-    - name: Install Ruby and Gems
-      id: install-ruby
-      uses: ruby/setup-ruby@v1
-      with:
-        bundler-cache: true
-      background: true
-
     - name: Setup Node
       uses: actions/setup-node@v6
       with:
         node-version-file: .node-version
         cache: yarn
 
-    - name: Setup Chrome
-      if: inputs.web-driver == 'selenium'
-      id: setup-chrome
-      uses: browser-actions/setup-chrome@v2
-      background: true
-
     - name: Run Yarn Install
-      id: yarn-install
       shell: bash
       run: yarn install --immutable
-      background: true
 
     - name: Check Playwright Cache
       if: inputs.web-driver == 'playwright'
@@ -56,8 +41,15 @@ runs:
       shell: bash
       run: yarn playwright install chromium
 
-    - name: Wait for background setup
-      wait-all:
+    - name: Setup Chrome
+      if: inputs.web-driver == 'selenium'
+      uses: browser-actions/setup-chrome@v2
+      id: setup-chrome
+
+    - name: Install Ruby and Gems
+      uses: ruby/setup-ruby@v1
+      with:
+        bundler-cache: true
 
     - name: Retrieve Cached Rails Assets
       id: cache-assets

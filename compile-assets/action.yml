@@ -24,14 +24,6 @@ runs:
       shell: bash
       run: corepack enable
 
-    - name: Install Ruby and Gems
-      if: ${{ steps.check-asset-cache.outputs.cache-hit != 'true' }}
-      id: install-ruby
-      uses: ruby/setup-ruby@v1
-      with:
-        bundler-cache: true
-      background: true
-
     - name: Setup Node
       if: ${{ steps.check-asset-cache.outputs.cache-hit != 'true' }}
       uses: actions/setup-node@v6
@@ -39,18 +31,18 @@ runs:
         node-version-file: .node-version
         cache: yarn
 
-    - name: Run Yarn Install
+    - name: Install Ruby and Gems
       if: ${{ steps.check-asset-cache.outputs.cache-hit != 'true' }}
-      id: yarn-install
-      shell: bash
-      run: yarn install --immutable
-      background: true
+      uses: ruby/setup-ruby@v1
+      with:
+        bundler-cache: true
 
     - name: Build Assets
       if: ${{ steps.check-asset-cache.outputs.cache-hit != 'true' }}
-      wait: [install-ruby, yarn-install]
       shell: bash
-      run: bundle exec rails assets:precompile
+      run: |
+        yarn install --immutable
+        bundle exec rails assets:precompile
 
     - name: Cache Rails Precompiled Assets
       if: ${{ steps.check-asset-cache.outputs.cache-hit != 'true' }}
