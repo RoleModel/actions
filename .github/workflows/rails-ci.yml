@@ -170,13 +170,20 @@ jobs:
             uses: actions/cache/restore@v6
             with:
               path: tmp/turbo_rspec_runtime.log
-              key: parallel-spec-runtimes-${{ github.sha }}_${{ github.run_attempt }}
+              key: parallel-spec-runtimes-${{ github.sha }}
               restore-keys: parallel-spec-runtimes-
 
       - name: Run Rspec Tests
         run: bundle exec parallel_rspec --verbose spec/
         env:
           CAPYBARA_DRIVER: js
+
+      - name: Save Turbo-Test Runtime Stats
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: tmp/turbo_rspec_runtime.log
+          key: parallel-spec-runtimes-${{ github.sha }}
 
       - name: Publish Test Results
         uses: mikepenz/action-junit-report@v6
