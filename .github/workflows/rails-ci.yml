@@ -54,7 +54,8 @@ on:
         description: >
           Additional secret environment variables, one KEY=VALUE per line
           (same shape as extra_env). Pass real secret values through here,
-          e.g. `extra_secrets: |\n  STRIPE_KEY=${{ secrets.STRIPE_KEY }}`.
+          referencing the caller's own secrets context on the right-hand
+          side of each line.
         required: false
 env:
   BUNDLE_WITHOUT: production
@@ -94,8 +95,10 @@ jobs:
         run: echo "${{ inputs.extra_env }}" >> "$GITHUB_ENV"
 
       - name: Set Extra Secrets
-        if: ${{ secrets.extra_secrets }}
-        run: echo "${{ secrets.extra_secrets }}" >> "$GITHUB_ENV"
+        env:
+          EXTRA_SECRETS: ${{ secrets.extra_secrets }}
+        if: ${{ env.EXTRA_SECRETS != '' }}
+        run: echo "$EXTRA_SECRETS" >> "$GITHUB_ENV"
 
       # Ruby/gems and apt packages background immediately; corepack → node → yarn
       # chain in the foreground so yarn install can overlap with the slow installs.
