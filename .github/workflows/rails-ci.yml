@@ -33,6 +33,10 @@ on:
         description: Postgres Docker image version tag
         type: string
         default: "17"
+      playwright:
+        description: Install the Playwright Chromium browser (for apps using capybara-playwright-driver)
+        type: boolean
+        default: false
 env:
   BUNDLE_WITHOUT: production
   CI: true
@@ -107,6 +111,15 @@ jobs:
         run: yarn install --immutable
         background: true
 
+      - name: Cache Playwright Chromium Browser
+        if: ${{ inputs.playwright }}
+        id: cache-playwright
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-browsers-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+        background: true
+
       - wait-all:
 
       - parallel:
@@ -136,6 +149,10 @@ jobs:
               brakeman_version: ${{ inputs.brakeman_version }}
               brakeman_flags: ${{ inputs.brakeman_flags }}
               reporter: github-pr-check
+
+          - name: Install Playwright Chromium Browser
+            if: ${{ inputs.playwright && steps.cache-playwright.outputs.cache-hit != 'true' }}
+            run: yarn playwright install --with-deps chromium
 
       - parallel:
           - name: Save Asset Cache
