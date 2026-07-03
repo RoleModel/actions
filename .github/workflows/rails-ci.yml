@@ -156,16 +156,6 @@ jobs:
             if: ${{ inputs.playwright && steps.cache-playwright.outputs.cache-hit != 'true' }}
             run: yarn playwright install --with-deps chromium
 
-      - parallel:
-          - name: Save Asset Cache
-            if: steps.cache-assets.outputs.cache-hit != 'true'
-            uses: actions/cache/save@v6
-            with:
-              path: |
-                public/assets
-                app/assets/builds
-              key: ${{ steps.cache-assets.outputs.cache-primary-key }}
-
           - name: Load Previous Turbo-Test Runtime Stats
             uses: actions/cache/restore@v6
             with:
@@ -174,6 +164,15 @@ jobs:
               restore-keys: |
                 parallel-spec-runtimes-${{ github.head_ref || github.ref_name }}-
                 parallel-spec-runtimes-
+
+      - name: Save Asset Cache
+        if: steps.cache-assets.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            public/assets
+            app/assets/builds
+          key: ${{ steps.cache-assets.outputs.cache-primary-key }}
 
       - name: Run Rspec Tests
         run: bundle exec parallel_rspec --verbose spec/
