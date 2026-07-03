@@ -170,8 +170,10 @@ jobs:
             uses: actions/cache/restore@v6
             with:
               path: tmp/turbo_rspec_runtime.log
-              key: parallel-spec-runtimes-${{ github.sha }}
-              restore-keys: parallel-spec-runtimes-
+              key: parallel-spec-runtimes-${{ github.head_ref || github.ref_name }}-${{ github.sha }}
+              restore-keys: |
+                parallel-spec-runtimes-${{ github.head_ref || github.ref_name }}-
+                parallel-spec-runtimes-
 
       - name: Run Rspec Tests
         run: bundle exec parallel_rspec --verbose spec/
@@ -183,7 +185,7 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: tmp/turbo_rspec_runtime.log
-          key: parallel-spec-runtimes-${{ github.sha }}
+          key: parallel-spec-runtimes-${{ github.head_ref || github.ref_name }}-${{ github.sha }}
 
       - name: Publish Test Results
         uses: mikepenz/action-junit-report@v6
