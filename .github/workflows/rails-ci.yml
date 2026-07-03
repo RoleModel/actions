@@ -23,6 +23,12 @@ on:
       js_lint_command:
         description: JS linting command to run (omit to skip)
         type: string
+      brakeman_version:
+        description: Brakeman gem version to run via reviewdog (omit to skip, e.g. "8.0.5")
+        type: string
+      brakeman_flags:
+        description: Extra flags passed to Brakeman (e.g. "--quiet")
+        type: string
       postgres_version:
         description: Postgres Docker image version tag
         type: string
@@ -120,6 +126,14 @@ jobs:
           - name: ESLint
             if: ${{ inputs.js_lint_command }}
             run: ${{ inputs.js_lint_command }}
+
+          - name: Brakeman
+            if: ${{ inputs.brakeman_version }}
+            uses: reviewdog/action-brakeman@v2
+            with:
+              brakeman_version: ${{ inputs.brakeman_version }}
+              brakeman_flags: ${{ inputs.brakeman_flags }}
+              reporter: github-pr-check
 
       - parallel:
           - name: Save Asset Cache
