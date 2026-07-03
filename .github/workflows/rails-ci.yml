@@ -92,16 +92,18 @@ jobs:
         background: true
 
       - name: Enable Corepack
+        if: ${{ hashFiles('yarn.lock') != '' }}
         run: corepack enable
 
       - name: Setup Node
+        if: ${{ hashFiles('yarn.lock') != '' }}
         uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
           cache: yarn
 
       - name: Install Yarn Packages
-        id: yarn-install
+        if: ${{ hashFiles('yarn.lock') != '' }}
         run: yarn install --immutable
         background: true
 
