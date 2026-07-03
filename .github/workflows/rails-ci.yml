@@ -44,6 +44,12 @@ on:
           input, evaluated before the caller's secrets are in scope.
         type: string
     secrets:
+      RAILS_MASTER_KEY:
+        description: Rails master key for decrypting credentials
+        required: false
+      BUNDLE_RUBYGEMS__PKG__GITHUB__COM:
+        description: Credential for the RoleModel RubyGems package registry
+        required: false
       extra_secrets:
         description: >
           Additional secret environment variables, one KEY=VALUE per line
