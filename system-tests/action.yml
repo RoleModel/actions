@@ -66,8 +66,10 @@ runs:
       uses: actions/cache/restore@v5
       with:
         path: tmp/turbo_rspec_runtime.log
-        key: parallel-spec-system-runtimes-${{ github.sha }}
-        restore-keys: parallel-spec-system-runtimes-
+        key: parallel-spec-system-runtimes-${{ github.head_ref || github.ref_name }}-${{ github.sha }}
+        restore-keys: |
+          parallel-spec-system-runtimes-${{ github.head_ref || github.ref_name }}-
+          parallel-spec-system-runtimes-
 
     - name: Setup Parallel Databases
       shell: bash
@@ -85,7 +87,7 @@ runs:
       uses: actions/cache/save@v5
       with:
         path: tmp/turbo_rspec_runtime.log
-        key: parallel-spec-system-runtimes-${{ github.sha }}
+        key: parallel-spec-system-runtimes-${{ github.head_ref || github.ref_name }}-${{ github.sha }}
 
     - name: Publish Test Results
       uses: mikepenz/action-junit-report@v6
