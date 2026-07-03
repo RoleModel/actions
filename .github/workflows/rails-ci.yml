@@ -37,6 +37,13 @@ on:
         description: Install the Playwright Chromium browser (for apps using capybara-playwright-driver)
         type: boolean
         default: false
+      extra_env:
+        description: >
+          Additional environment variables, one KEY=VALUE per line (same
+          format as a .env file). Use this for anything the app requires
+          that isn't already covered by an existing input, e.g. secrets
+          referenced from the caller's own `secrets.*` context.
+        type: string
 env:
   BUNDLE_WITHOUT: production
   CI: true
@@ -56,8 +63,6 @@ jobs:
     env:
       RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
       BUNDLE_RUBYGEMS__PKG__GITHUB__COM: ${{ secrets.BUNDLE_RUBYGEMS__PKG__GITHUB__COM || secrets.GITHUB_TOKEN }}
-      STRIPE_PRIVATE_KEY: ${{ secrets.STRIPE_PRIVATE_KEY }}
-      STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
 
     services:
       postgres:
@@ -71,6 +76,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+
+      - name: Set Extra Env
+        if: ${{ inputs.extra_env }}
+        run: echo "${{ inputs.extra_env }}" >> "$GITHUB_ENV"
 
       # Ruby/gems and apt packages background immediately; corepack → node → yarn
       # chain in the foreground so yarn install can overlap with the slow installs.
