@@ -36,11 +36,20 @@ on:
         default: false
       extra_env:
         description: >
-          Additional environment variables, one KEY=VALUE per line (same
-          format as a .env file). Use this for anything the app requires
-          that isn't already covered by an existing input, e.g. secrets
-          referenced from the caller's own `secrets.*` context.
+          Additional non-secret environment variables, one KEY=VALUE per
+          line (same format as a .env file). Use this for anything the app
+          requires that isn't already covered by an existing input. For
+          real secret values, use the extra_secrets secret instead —
+          `secrets.*` can't be referenced here since this is a `with:`
+          input, evaluated before the caller's secrets are in scope.
         type: string
+    secrets:
+      extra_secrets:
+        description: >
+          Additional secret environment variables, one KEY=VALUE per line
+          (same shape as extra_env). Pass real secret values through here,
+          e.g. `extra_secrets: |\n  STRIPE_KEY=${{ secrets.STRIPE_KEY }}`.
+        required: false
 env:
   BUNDLE_WITHOUT: production
   CI: true
@@ -77,6 +86,10 @@ jobs:
       - name: Set Extra Env
         if: ${{ inputs.extra_env }}
         run: echo "${{ inputs.extra_env }}" >> "$GITHUB_ENV"
+
+      - name: Set Extra Secrets
+        if: ${{ secrets.extra_secrets }}
+        run: echo "${{ secrets.extra_secrets }}" >> "$GITHUB_ENV"
 
       # Ruby/gems and apt packages background immediately; corepack → node → yarn
       # chain in the foreground so yarn install can overlap with the slow installs.
