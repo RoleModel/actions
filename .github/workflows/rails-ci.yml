@@ -164,19 +164,25 @@ jobs:
             id: rubocop
             if: ${{ inputs.rubocop_command }}
             continue-on-error: true
-            run: ${{ inputs.rubocop_command }}
+            run: |
+              mkdir -p tmp/lint-logs
+              ${{ inputs.rubocop_command }} 2>&1 | tee tmp/lint-logs/rubocop.log
 
           - name: Dependency Audit
             id: dependency-audit
             if: ${{ inputs.dependency_audit_command }}
             continue-on-error: true
-            run: ${{ inputs.dependency_audit_command }}
+            run: |
+              mkdir -p tmp/lint-logs
+              ${{ inputs.dependency_audit_command }} 2>&1 | tee tmp/lint-logs/dependency-audit.log
 
           - name: ESLint
             id: eslint
             if: ${{ inputs.js_lint_command }}
             continue-on-error: true
-            run: ${{ inputs.js_lint_command }}
+            run: |
+              mkdir -p tmp/lint-logs
+              ${{ inputs.js_lint_command }} 2>&1 | tee tmp/lint-logs/eslint.log
 
           - name: Brakeman
             id: brakeman
@@ -205,18 +211,35 @@ jobs:
         if: always()
         run: |
           mkdir -p tmp
+
+          write_testcase() {
+            name="$1"; outcome="$2"; logfile="$3"
+            case "$outcome" in
+              skipped|"") return ;;
+              failure)
+                echo "  <testcase name=\"$name\" classname=\"Linters\">"
+                echo "    <failure message=\"$name failed\"><![CDATA["
+                if [ -n "$logfile" ] && [ -f "$logfile" ]; then
+                  sed 's/]]>/]] >/g' "$logfile"
+                else
+                  echo "See this PR's inline Brakeman annotations for details."
+                fi
+                echo "]]></failure>"
+                echo "  </testcase>"
+                ;;
+              *)
+                echo "  <testcase name=\"$name\" classname=\"Linters\"/>"
+                ;;
+            esac
+          }
+
           {
             echo '<?xml version="1.0" encoding="UTF-8"?>'
             echo '<testsuite name="Linters">'
-            for entry in "Rubocop:${{ steps.rubocop.outcome }}" "Dependency Audit:${{ steps.dependency-audit.outcome }}" "ESLint:${{ steps.eslint.outcome }}" "Brakeman:${{ steps.brakeman.outcome }}"; do
-              name="${entry%%:*}"
-              outcome="${entry##*:}"
-              case "$outcome" in
-                skipped|"") continue ;;
-                failure) echo "  <testcase name=\"$name\" classname=\"Linters\"><failure message=\"$name failed\"/></testcase>" ;;
-                *) echo "  <testcase name=\"$name\" classname=\"Linters\"/>" ;;
-              esac
-            done
+            write_testcase "Rubocop" "${{ steps.rubocop.outcome }}" "tmp/lint-logs/rubocop.log"
+            write_testcase "Dependency Audit" "${{ steps.dependency-audit.outcome }}" "tmp/lint-logs/dependency-audit.log"
+            write_testcase "ESLint" "${{ steps.eslint.outcome }}" "tmp/lint-logs/eslint.log"
+            write_testcase "Brakeman" "${{ steps.brakeman.outcome }}" ""
             echo '</testsuite>'
           } > tmp/lint-results.xml
 
