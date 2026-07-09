@@ -166,8 +166,8 @@ jobs:
             continue-on-error: true
             run: |
               set -o pipefail
-              mkdir -p tmp/lint-logs
-              ${{ inputs.rubocop_command }} 2>&1 | tee tmp/lint-logs/rubocop.log
+              mkdir -p tmp
+              ${{ inputs.rubocop_command }} --format junit --out tmp/rubocop-results.xml
 
           - name: Dependency Audit
             id: dependency-audit
@@ -191,11 +191,12 @@ jobs:
             id: brakeman
             if: ${{ inputs.brakeman_version }}
             continue-on-error: true
-            uses: reviewdog/action-brakeman@v2
-            with:
-              brakeman_version: ${{ inputs.brakeman_version }}
-              reporter: github-pr-check
-              fail_level: error
+            run: |
+              set -o pipefail
+              mkdir -p tmp
+              gem install brakeman -v ${{ inputs.brakeman_version }} --no-document
+              brakeman -f github || true
+              brakeman -f junit -o tmp/brakeman-results.xml
 
           - name: Install Playwright Chromium Browser
             if: ${{ inputs.playwright && steps.cache-playwright.outputs.cache-hit != 'true' }}
@@ -224,8 +225,6 @@ jobs:
                 echo "    <failure message=\"$name failed\"><![CDATA["
                 if [ -n "$logfile" ] && [ -f "$logfile" ]; then
                   sed 's/]]>/]] >/g' "$logfile"
-                else
-                  echo "See this PR's inline Brakeman annotations for details."
                 fi
                 echo "]]></failure>"
                 echo "  </testcase>"
@@ -239,10 +238,8 @@ jobs:
           {
             echo '<?xml version="1.0" encoding="UTF-8"?>'
             echo '<testsuite name="Linters">'
-            write_testcase "Rubocop" "${{ steps.rubocop.outcome }}" "tmp/lint-logs/rubocop.log"
             write_testcase "Dependency Audit" "${{ steps.dependency-audit.outcome }}" "tmp/lint-logs/dependency-audit.log"
             write_testcase "ESLint" "${{ steps.eslint.outcome }}" "tmp/lint-logs/eslint.log"
-            write_testcase "Brakeman" "${{ steps.brakeman.outcome }}" ""
             echo '</testsuite>'
           } > tmp/lint-results.xml
 
@@ -275,6 +272,8 @@ jobs:
           report_paths: |
             tmp/rspec-*.xml
             tmp/lint-results.xml
+            tmp/rubocop-results.xml
+            tmp/brakeman-results.xml
           detailed_summary: true
           truncate_stack_traces: false
 
