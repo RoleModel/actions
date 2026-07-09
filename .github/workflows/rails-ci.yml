@@ -165,6 +165,7 @@ jobs:
             if: ${{ inputs.rubocop_command }}
             continue-on-error: true
             run: |
+              set -o pipefail
               mkdir -p tmp/lint-logs
               ${{ inputs.rubocop_command }} 2>&1 | tee tmp/lint-logs/rubocop.log
 
@@ -173,6 +174,7 @@ jobs:
             if: ${{ inputs.dependency_audit_command }}
             continue-on-error: true
             run: |
+              set -o pipefail
               mkdir -p tmp/lint-logs
               ${{ inputs.dependency_audit_command }} 2>&1 | tee tmp/lint-logs/dependency-audit.log
 
@@ -181,6 +183,7 @@ jobs:
             if: ${{ inputs.js_lint_command }}
             continue-on-error: true
             run: |
+              set -o pipefail
               mkdir -p tmp/lint-logs
               ${{ inputs.js_lint_command }} 2>&1 | tee tmp/lint-logs/eslint.log
 
