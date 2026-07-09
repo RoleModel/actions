@@ -276,6 +276,7 @@ jobs:
             tmp/rspec-*.xml
             tmp/lint-results.xml
           detailed_summary: true
+          truncate_stack_traces: false
 
       - name: Check Linter Results
         if: always()
