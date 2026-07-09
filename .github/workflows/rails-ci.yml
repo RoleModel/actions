@@ -183,7 +183,7 @@ jobs:
             continue-on-error: true
             run: |
               mkdir -p tmp
-              bundle exec bundle-audit check --update --format junit --out tmp/bundle-audit-results.xml || true
+              bundle exec bundle-audit check --update --format junit --output tmp/bundle-audit-results.xml || true
 
           - name: ESLint
             id: eslint
@@ -247,7 +247,7 @@ jobs:
             echo '<testsuite name="Linters">'
             write_testcase "ESLint" "${{ steps.eslint.outcome }}" "tmp/lint-logs/eslint.log"
             echo '</testsuite>'
-          } > tmp/lint-results.xml
+          } > tmp/rspec-lint-results.xml
 
       - name: Save Asset Cache
         if: steps.cache-assets.outputs.cache-hit != 'true'
@@ -275,9 +275,7 @@ jobs:
         if: always()
         with:
           check_name: Test Results
-          report_paths: |
-            tmp/rspec-*.xml
-            tmp/lint-results.xml
+          report_paths: tmp/rspec-*.xml
           detailed_summary: true
           truncate_stack_traces: false
 
