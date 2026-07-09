@@ -178,6 +178,13 @@ jobs:
               mkdir -p tmp/lint-logs
               ${{ inputs.dependency_audit_command }} 2>&1 | tee tmp/lint-logs/dependency-audit.log
 
+          - name: Dependency Audit (JUnit)
+            if: ${{ inputs.dependency_audit_command }}
+            continue-on-error: true
+            run: |
+              mkdir -p tmp
+              bundle exec bundle-audit check --update --format junit --out tmp/bundle-audit-results.xml || true
+
           - name: ESLint
             id: eslint
             if: ${{ inputs.js_lint_command }}
@@ -238,7 +245,6 @@ jobs:
           {
             echo '<?xml version="1.0" encoding="UTF-8"?>'
             echo '<testsuite name="Linters">'
-            write_testcase "Dependency Audit" "${{ steps.dependency-audit.outcome }}" "tmp/lint-logs/dependency-audit.log"
             write_testcase "ESLint" "${{ steps.eslint.outcome }}" "tmp/lint-logs/eslint.log"
             echo '</testsuite>'
           } > tmp/lint-results.xml
@@ -290,6 +296,15 @@ jobs:
         with:
           check_name: Brakeman
           report_paths: tmp/brakeman-results.xml
+          detailed_summary: true
+          truncate_stack_traces: false
+
+      - name: Publish Dependency Audit Results
+        uses: mikepenz/action-junit-report@v6
+        if: always() && inputs.dependency_audit_command
+        with:
+          check_name: Dependency Audit
+          report_paths: tmp/bundle-audit-results.xml
           detailed_summary: true
           truncate_stack_traces: false
 
