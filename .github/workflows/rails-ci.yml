@@ -18,13 +18,18 @@ on:
         description: Rubocop command to run (omit to skip)
         type: string
       dependency_audit_command:
-        description: Dependency audit command to run (omit to skip)
+        description: >
+          Dependency audit command to run (omit to skip). For a
+          per-finding breakdown in the Dependency Audit check, have
+          your bundle-audit invocation also write JUnit XML to
+          tmp/dependency-audit-results.xml, e.g. append
+          `--format junit --output tmp/dependency-audit-results.xml`.
         type: string
       js_lint_command:
         description: JS linting command to run (omit to skip)
         type: string
       brakeman_version:
-        description: Brakeman gem version to run via reviewdog (omit to skip, e.g. "8.0.5")
+        description: Brakeman gem version to run (omit to skip, e.g. "8.0.5")
         type: string
       postgres_version:
         description: Postgres Docker image version tag
@@ -211,13 +216,6 @@ jobs:
                 parallel-spec-runtimes-${{ github.head_ref || github.ref_name }}-
                 parallel-spec-runtimes-
 
-      - name: Dependency Audit (JUnit)
-        if: ${{ inputs.dependency_audit_command }}
-        continue-on-error: true
-        run: |
-          mkdir -p tmp
-          bundle exec bundle-audit check --format junit --output tmp/bundle-audit-results.xml || true
-
       - name: Record Linter Results
         if: always()
         run: |
@@ -270,41 +268,42 @@ jobs:
           path: tmp/turbo_rspec_runtime.log
           key: parallel-spec-runtimes-${{ github.head_ref || github.ref_name }}-${{ github.sha }}
 
-      - name: Publish Test Results
-        uses: mikepenz/action-junit-report@v6
-        if: always()
-        with:
-          check_name: Test Results
-          report_paths: tmp/rspec-*.xml
-          detailed_summary: true
-          truncate_stack_traces: false
+      - parallel:
+          - name: Publish Test Results
+            uses: mikepenz/action-junit-report@v6
+            if: always()
+            with:
+              check_name: Test Results
+              report_paths: tmp/rspec-*.xml
+              detailed_summary: true
+              truncate_stack_traces: false
 
-      - name: Publish Rubocop Results
-        uses: mikepenz/action-junit-report@v6
-        if: always() && inputs.rubocop_command
-        with:
-          check_name: Rubocop
-          report_paths: tmp/rubocop-results.xml
-          detailed_summary: true
-          truncate_stack_traces: false
+          - name: Publish Rubocop Results
+            uses: mikepenz/action-junit-report@v6
+            if: always() && inputs.rubocop_command
+            with:
+              check_name: Rubocop
+              report_paths: tmp/rubocop-results.xml
+              detailed_summary: true
+              truncate_stack_traces: false
 
-      - name: Publish Brakeman Results
-        uses: mikepenz/action-junit-report@v6
-        if: always() && inputs.brakeman_version
-        with:
-          check_name: Brakeman
-          report_paths: tmp/brakeman-results.xml
-          detailed_summary: true
-          truncate_stack_traces: false
+          - name: Publish Brakeman Results
+            uses: mikepenz/action-junit-report@v6
+            if: always() && inputs.brakeman_version
+            with:
+              check_name: Brakeman
+              report_paths: tmp/brakeman-results.xml
+              detailed_summary: true
+              truncate_stack_traces: false
 
-      - name: Publish Dependency Audit Results
-        uses: mikepenz/action-junit-report@v6
-        if: always() && inputs.dependency_audit_command
-        with:
-          check_name: Dependency Audit
-          report_paths: tmp/bundle-audit-results.xml
-          detailed_summary: true
-          truncate_stack_traces: false
+          - name: Publish Dependency Audit Results
+            uses: mikepenz/action-junit-report@v6
+            if: always() && inputs.dependency_audit_command
+            with:
+              check_name: Dependency Audit
+              report_paths: tmp/dependency-audit-results.xml
+              detailed_summary: true
+              truncate_stack_traces: false
 
       - name: Check Linter Results
         if: always()
