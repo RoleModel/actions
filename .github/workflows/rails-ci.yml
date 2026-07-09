@@ -200,7 +200,6 @@ jobs:
               set -o pipefail
               mkdir -p tmp
               gem install brakeman -v ${{ inputs.brakeman_version }} --no-document
-              brakeman -f github || true
               brakeman -f junit -o tmp/brakeman-results.xml
 
           - name: Install Playwright Chromium Browser
@@ -305,24 +304,24 @@ jobs:
               detailed_summary: true
               truncate_stack_traces: false
 
-      - name: Check Linter Results
-        if: always()
-        run: |
-          failed=false
-          for entry in "Rubocop:${{ steps.rubocop.outcome }}" "Dependency Audit:${{ steps.dependency-audit.outcome }}" "ESLint:${{ steps.eslint.outcome }}" "Brakeman:${{ steps.brakeman.outcome }}"; do
-            name="${entry%%:*}"
-            outcome="${entry##*:}"
-            if [ "$outcome" = "failure" ]; then
-              echo "::error::$name failed"
-              failed=true
-            fi
-          done
-          [ "$failed" = false ]
+          - name: Check Linter Results
+            if: always()
+            run: |
+              failed=false
+              for entry in "Rubocop:${{ steps.rubocop.outcome }}" "Dependency Audit:${{ steps.dependency-audit.outcome }}" "ESLint:${{ steps.eslint.outcome }}" "Brakeman:${{ steps.brakeman.outcome }}"; do
+                name="${entry%%:*}"
+                outcome="${entry##*:}"
+                if [ "$outcome" = "failure" ]; then
+                  echo "::error::$name failed"
+                  failed=true
+                fi
+              done
+              [ "$failed" = false ]
 
-      - name: Analyze Test Runtimes
-        uses: RoleModel/actions/test-runtime-analyzer@v1
-        with:
-          test-output-path: tmp/turbo_rspec_runtime.log
+          - name: Analyze Test Runtimes
+            uses: RoleModel/actions/test-runtime-analyzer@v1
+            with:
+              test-output-path: tmp/turbo_rspec_runtime.log
 
       - name: Upload Screenshots
         if: failure()
