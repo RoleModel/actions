@@ -178,13 +178,6 @@ jobs:
               mkdir -p tmp/lint-logs
               ${{ inputs.dependency_audit_command }} 2>&1 | tee tmp/lint-logs/dependency-audit.log
 
-          - name: Dependency Audit (JUnit)
-            if: ${{ inputs.dependency_audit_command }}
-            continue-on-error: true
-            run: |
-              mkdir -p tmp
-              bundle exec bundle-audit check --update --format junit --output tmp/bundle-audit-results.xml || true
-
           - name: ESLint
             id: eslint
             if: ${{ inputs.js_lint_command }}
@@ -217,6 +210,13 @@ jobs:
               restore-keys: |
                 parallel-spec-runtimes-${{ github.head_ref || github.ref_name }}-
                 parallel-spec-runtimes-
+
+      - name: Dependency Audit (JUnit)
+        if: ${{ inputs.dependency_audit_command }}
+        continue-on-error: true
+        run: |
+          mkdir -p tmp
+          bundle exec bundle-audit check --format junit --output tmp/bundle-audit-results.xml || true
 
       - name: Record Linter Results
         if: always()
