@@ -1,0 +1,239 @@
+name: Rails CI
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        description: Runner to use
+        type: string
+        default: blacksmith-8vcpu-ubuntu-2404
+      timeout:
+        description: Job timeout in minutes
+        type: number
+        default: 20
+      apt_packages:
+        description: Space-separated apt packages to install alongside setup (e.g. "libvips")
+        type: string
+      rubocop_command:
+        description: Rubocop command to run (omit to skip)
+        type: string
+      dependency_audit_command:
+        description: Dependency audit command to run (omit to skip)
+        type: string
+      js_lint_command:
+        description: JS linting command to run (omit to skip)
+        type: string
+      brakeman_version:
+        description: Brakeman gem version to run via reviewdog (omit to skip, e.g. "8.0.5")
+        type: string
+      postgres_version:
+        description: Postgres Docker image version tag
+        type: string
+        default: "17"
+      playwright:
+        description: Install the Playwright Chromium browser (for apps using capybara-playwright-driver)
+        type: boolean
+        default: false
+      extra_env:
+        description: >
+          Additional non-secret environment variables, one KEY=VALUE per
+          line (same format as a .env file). Use this for anything the app
+          requires that isn't already covered by an existing input. For
+          real secret values, use the extra_secrets secret instead —
+          `secrets.*` can't be referenced here since this is a `with:`
+          input, evaluated before the caller's secrets are in scope.
+        type: string
+    secrets:
+      RAILS_MASTER_KEY:
+        description: Rails master key for decrypting credentials
+        required: false
+      BUNDLE_RUBYGEMS__PKG__GITHUB__COM:
+        description: Credential for the RoleModel RubyGems package registry
+        required: false
+      extra_secrets:
+        description: >
+          Additional secret environment variables, one KEY=VALUE per line
+          (same shape as extra_env). Pass real secret values through here,
+          referencing the caller's own secrets context on the right-hand
+          side of each line.
+        required: false
+env:
+  BUNDLE_WITHOUT: production
+  CI: true
+  RAILS_ENV: test
+  POSTGRES_USER: postgres
+  POSTGRES_PASSWORD: password
+  PARALLEL_TEST_FIRST_IS_1: false
+
+jobs:
+  ci:
+    name: CI
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: ${{ inputs.timeout }}
+    permissions:
+      checks: write
+      contents: read
+    env:
+      RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
+      BUNDLE_RUBYGEMS__PKG__GITHUB__COM: ${{ secrets.BUNDLE_RUBYGEMS__PKG__GITHUB__COM || secrets.GITHUB_TOKEN }}
+
+    services:
+      postgres:
+        image: postgres:${{ inputs.postgres_version }}
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set Extra Env
+        if: ${{ inputs.extra_env }}
+        run: echo "${{ inputs.extra_env }}" >> "$GITHUB_ENV"
+
+      - name: Set Extra Secrets
+        env:
+          EXTRA_SECRETS: ${{ secrets.extra_secrets }}
+        if: ${{ env.EXTRA_SECRETS != '' }}
+        run: echo "$EXTRA_SECRETS" >> "$GITHUB_ENV"
+
+      # Ruby/gems and apt packages background immediately; corepack → node → yarn
+      # chain in the foreground so yarn install can overlap with the slow installs.
+      - name: Install Ruby and Gems
+        id: install-ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+        background: true
+
+      - name: Install system packages
+        id: install-apt
+        if: ${{ inputs.apt_packages }}
+        run: sudo apt-get update && sudo apt-get install -y ${{ inputs.apt_packages }}
+        background: true
+
+      - name: Restore Asset Cache
+        id: cache-assets
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            public/assets
+            app/assets/builds
+          key: rails-assets-${{ hashFiles('app/assets/images/**/*', 'app/assets/stylesheets/**/*', 'app/javascript/**/*', 'yarn.lock', 'Gemfile.lock') }}
+        background: true
+
+      - name: Enable Corepack
+        if: ${{ hashFiles('yarn.lock') != '' }}
+        run: corepack enable
+
+      - name: Setup Node
+        if: ${{ hashFiles('yarn.lock') != '' }}
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: yarn
+
+      - name: Install Yarn Packages
+        if: ${{ hashFiles('yarn.lock') != '' }}
+        run: yarn install --immutable
+        background: true
+
+      - name: Cache Playwright Chromium Browser
+        if: ${{ inputs.playwright }}
+        id: cache-playwright
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-browsers-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+        background: true
+
+      - wait-all:
+
+      - parallel:
+          - name: Compile Assets
+            if: ${{ steps.cache-assets.outputs.cache-hit != 'true' }}
+            run: bundle exec rails assets:precompile
+
+          - name: Setup Parallel Databases
+            run: bundle exec rake parallel:create parallel:load_schema
+
+          - name: Rubocop
+            if: ${{ inputs.rubocop_command }}
+            run: ${{ inputs.rubocop_command }}
+
+          - name: Dependency Audit
+            if: ${{ inputs.dependency_audit_command }}
+            run: ${{ inputs.dependency_audit_command }}
+
+          - name: ESLint
+            if: ${{ inputs.js_lint_command }}
+            run: ${{ inputs.js_lint_command }}
+
+          - name: Brakeman
+            if: ${{ inputs.brakeman_version }}
+            uses: reviewdog/action-brakeman@v2
+            with:
+              brakeman_version: ${{ inputs.brakeman_version }}
+              reporter: github-pr-check
+
+          - name: Install Playwright Chromium Browser
+            if: ${{ inputs.playwright && steps.cache-playwright.outputs.cache-hit != 'true' }}
+            run: yarn playwright install --with-deps chromium
+
+          - name: Load Previous Turbo-Test Runtime Stats
+            uses: actions/cache/restore@v6
+            with:
+              path: tmp/turbo_rspec_runtime.log
+              key: parallel-spec-runtimes-${{ github.head_ref || github.ref_name }}-${{ github.sha }}
+              restore-keys: |
+                parallel-spec-runtimes-${{ github.head_ref || github.ref_name }}-
+                parallel-spec-runtimes-
+
+      - name: Save Asset Cache
+        if: steps.cache-assets.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            public/assets
+            app/assets/builds
+          key: ${{ steps.cache-assets.outputs.cache-primary-key }}
+
+      - name: Run Rspec Tests
+        run: bundle exec parallel_rspec --verbose spec/
+        env:
+          CAPYBARA_DRIVER: js
+
+      - name: Save Turbo-Test Runtime Stats
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: tmp/turbo_rspec_runtime.log
+          key: parallel-spec-runtimes-${{ github.head_ref || github.ref_name }}-${{ github.sha }}
+
+      - name: Publish Test Results
+        uses: mikepenz/action-junit-report@v6
+        if: always()
+        with:
+          check_name: Test Results
+          report_paths: tmp/rspec-*.xml
+          detailed_summary: true
+
+      - name: Analyze Test Runtimes
+        uses: RoleModel/actions/test-runtime-analyzer@v1
+        with:
+          test-output-path: tmp/turbo_rspec_runtime.log
+
+      - name: Upload Screenshots
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: rspec-screenshots
+          path: tmp/capybara
+
+      - name: Cleanup
+        uses: RoleModel/actions/test-cleanup@v1
+        with:
+          artifact-prefix: rspec
