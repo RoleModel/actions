@@ -28,8 +28,14 @@ on:
       js_lint_command:
         description: JS linting command to run (omit to skip)
         type: string
-      brakeman_version:
-        description: Brakeman gem version to run (omit to skip, e.g. "8.0.5")
+      brakeman_command:
+        description: >
+          Brakeman command to run (omit to skip). Brakeman must
+          already be available (e.g. bundled in your Gemfile) --
+          this doesn't install it for you. For a per-finding
+          breakdown in the Brakeman check, also write JUnit XML to
+          tmp/brakeman-results.xml, e.g. append
+          `--format junit --output tmp/brakeman-results.xml`.
         type: string
       postgres_version:
         description: Postgres Docker image version tag
@@ -194,13 +200,12 @@ jobs:
 
           - name: Brakeman
             id: brakeman
-            if: ${{ inputs.brakeman_version }}
+            if: ${{ inputs.brakeman_command }}
             continue-on-error: true
             run: |
               set -o pipefail
               mkdir -p tmp
-              gem install brakeman -v ${{ inputs.brakeman_version }} --no-document
-              brakeman -f junit -o tmp/brakeman-results.xml
+              ${{ inputs.brakeman_command }}
 
           - name: Install Playwright Chromium Browser
             if: ${{ inputs.playwright && steps.cache-playwright.outputs.cache-hit != 'true' }}
@@ -288,7 +293,7 @@ jobs:
 
           - name: Publish Brakeman Results
             uses: mikepenz/action-junit-report@v6
-            if: always() && inputs.brakeman_version
+            if: always() && inputs.brakeman_command
             with:
               check_name: Brakeman
               report_paths: tmp/brakeman-results.xml
