@@ -272,8 +272,24 @@ jobs:
           report_paths: |
             tmp/rspec-*.xml
             tmp/lint-results.xml
-            tmp/rubocop-results.xml
-            tmp/brakeman-results.xml
+          detailed_summary: true
+          truncate_stack_traces: false
+
+      - name: Publish Rubocop Results
+        uses: mikepenz/action-junit-report@v6
+        if: always() && inputs.rubocop_command
+        with:
+          check_name: Rubocop
+          report_paths: tmp/rubocop-results.xml
+          detailed_summary: true
+          truncate_stack_traces: false
+
+      - name: Publish Brakeman Results
+        uses: mikepenz/action-junit-report@v6
+        if: always() && inputs.brakeman_version
+        with:
+          check_name: Brakeman
+          report_paths: tmp/brakeman-results.xml
           detailed_summary: true
           truncate_stack_traces: false
 
