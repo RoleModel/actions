@@ -39,7 +39,7 @@ runs:
     - name: Retrieve Cached Rails Assets
       id: cache-assets
       if: ${{ inputs.needs-compiled-assets == 'true' }}
-      uses: actions/cache/restore@v5
+      uses: actions/cache/restore@v6
       with:
         path: |
           public/assets
@@ -49,7 +49,7 @@ runs:
 
     - name: Load Previous Turbo-Test Runtime Stats
       id: restore-parallel-spec
-      uses: actions/cache/restore@v5
+      uses: actions/cache/restore@v6
       with:
         path: tmp/turbo_rspec_runtime.log
         key: parallel-spec-non-system-runtimes-${{ github.sha }}_${{ github.run_attempt }}

@@ -102,6 +102,8 @@ jobs:
 
       # Ruby/gems and apt packages background immediately; corepack → node → yarn
       # chain in the foreground so yarn install can overlap with the slow installs.
+      # Below, gem-only and yarn-only steps are unblocked as soon as their one
+      # real dependency finishes, rather than all waiting on each other.
       - name: Install Ruby and Gems
         id: install-ruby
         uses: ruby/setup-ruby@v1
@@ -137,6 +139,7 @@ jobs:
           cache: yarn
 
       - name: Install Yarn Packages
+        id: install-yarn
         if: ${{ hashFiles('yarn.lock') != '' }}
         run: yarn install --immutable
         background: true
@@ -150,88 +153,119 @@ jobs:
           key: playwright-browsers-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
         background: true
 
-      - wait-all:
+      # No dependencies of its own, so it can fire immediately too.
+      - name: Load Previous Turbo-Test Runtime Stats
+        uses: actions/cache/restore@v6
+        with:
+          path: tmp/turbo_rspec_runtime.log
+          key: parallel-spec-runtimes-${{ github.head_ref || github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            parallel-spec-runtimes-${{ github.head_ref || github.ref_name }}-
+            parallel-spec-runtimes-
+        background: true
 
-      - parallel:
-          - name: Compile Assets
-            if: ${{ steps.cache-assets.outputs.cache-hit != 'true' }}
-            run: bundle exec rails assets:precompile
+      # Gem-only work can start as soon as gems are ready, instead of waiting
+      # on node/yarn/assets too.
+      - wait: [install-ruby]
 
-          - name: Setup Parallel Databases
-            run: bundle exec rake parallel:create parallel:load_schema
+      - name: Setup Parallel Databases
+        run: bundle exec rake parallel:create parallel:load_schema
+        background: true
 
-          - name: Rubocop
-            if: ${{ inputs.rubocop_command }}
-            run: ${{ inputs.rubocop_command }}
+      - name: Rubocop
+        if: ${{ inputs.rubocop_command }}
+        run: ${{ inputs.rubocop_command }}
+        background: true
 
-          - name: Dependency Audit
-            if: ${{ inputs.dependency_audit_command }}
-            run: ${{ inputs.dependency_audit_command }}
+      - name: Dependency Audit
+        if: ${{ inputs.dependency_audit_command }}
+        run: ${{ inputs.dependency_audit_command }}
+        background: true
 
-          - name: ESLint
-            if: ${{ inputs.js_lint_command }}
-            run: ${{ inputs.js_lint_command }}
+      - name: Brakeman
+        if: ${{ inputs.brakeman_version }}
+        uses: reviewdog/action-brakeman@v2
+        with:
+          brakeman_version: ${{ inputs.brakeman_version }}
+          reporter: github-pr-check
+        background: true
 
-          - name: Brakeman
-            if: ${{ inputs.brakeman_version }}
-            uses: reviewdog/action-brakeman@v2
-            with:
-              brakeman_version: ${{ inputs.brakeman_version }}
-              reporter: github-pr-check
+      # Yarn-only work can start as soon as node_modules are ready.
+      - wait: [install-yarn]
 
-          - name: Install Playwright Chromium Browser
-            if: ${{ inputs.playwright && steps.cache-playwright.outputs.cache-hit != 'true' }}
-            run: yarn playwright install --with-deps chromium
+      - name: ESLint
+        if: ${{ inputs.js_lint_command }}
+        run: ${{ inputs.js_lint_command }}
+        background: true
 
-          - name: Load Previous Turbo-Test Runtime Stats
-            uses: actions/cache/restore@v6
-            with:
-              path: tmp/turbo_rspec_runtime.log
-              key: parallel-spec-runtimes-${{ github.head_ref || github.ref_name }}-${{ github.sha }}
-              restore-keys: |
-                parallel-spec-runtimes-${{ github.head_ref || github.ref_name }}-
-                parallel-spec-runtimes-
+      # Needs gems + yarn (both already waited-for above) and the asset cache
+      # lookup, but nothing from apt_packages or the playwright cache.
+      - wait: [cache-assets]
 
+      - name: Compile Assets
+        if: ${{ steps.cache-assets.outputs.cache-hit != 'true' }}
+        run: bundle exec rails assets:precompile
+        background: true
+
+      - wait: [cache-playwright]
+
+      - name: Install Playwright Chromium Browser
+        if: ${{ inputs.playwright && steps.cache-playwright.outputs.cache-hit != 'true' }}
+        run: yarn playwright install --with-deps chromium
+        background: true
+
+      - wait-all: true
+
+      # Doesn't need to finish before tests start, only before the job ends —
+      # the wait below is a cheap correctness net, not an expected delay,
+      # since the upload finishes long before the test run does.
       - name: Save Asset Cache
         if: steps.cache-assets.outputs.cache-hit != 'true'
+        id: save-asset-cache
         uses: actions/cache/save@v6
         with:
           path: |
             public/assets
             app/assets/builds
           key: ${{ steps.cache-assets.outputs.cache-primary-key }}
+        background: true
 
       - name: Run Rspec Tests
         run: bundle exec parallel_rspec --verbose spec/
         env:
           CAPYBARA_DRIVER: js
 
-      - name: Save Turbo-Test Runtime Stats
-        if: always()
-        uses: actions/cache/save@v6
-        with:
-          path: tmp/turbo_rspec_runtime.log
-          key: parallel-spec-runtimes-${{ github.head_ref || github.ref_name }}-${{ github.sha }}
+      - wait: [save-asset-cache]
 
-      - name: Publish Test Results
-        uses: mikepenz/action-junit-report@v6
-        if: always()
-        with:
-          check_name: Test Results
-          report_paths: tmp/rspec-*.xml
-          detailed_summary: true
+      # None of these read each other's output — all four only consume
+      # artifacts already produced by Run Rspec Tests above.
+      - parallel:
+          - name: Save Turbo-Test Runtime Stats
+            if: always()
+            uses: actions/cache/save@v6
+            with:
+              path: tmp/turbo_rspec_runtime.log
+              key: parallel-spec-runtimes-${{ github.head_ref || github.ref_name }}-${{ github.sha }}
 
-      - name: Analyze Test Runtimes
-        uses: RoleModel/actions/test-runtime-analyzer@v1
-        with:
-          test-output-path: tmp/turbo_rspec_runtime.log
+          - name: Publish Test Results
+            uses: mikepenz/action-junit-report@v6
+            if: always()
+            with:
+              check_name: Test Results
+              report_paths: tmp/rspec-*.xml
+              detailed_summary: true
 
-      - name: Upload Screenshots
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: rspec-screenshots
-          path: tmp/capybara
+          - name: Analyze Test Runtimes
+            uses: RoleModel/actions/test-runtime-analyzer@v1
+            with:
+              test-output-path: tmp/turbo_rspec_runtime.log
+
+          - name: Upload Screenshots
+            if: failure()
+            uses: actions/upload-artifact@v7
+            with:
+              name: rspec-screenshots
+              path: tmp/capybara
 
       - name: Cleanup
         uses: RoleModel/actions/test-cleanup@v1

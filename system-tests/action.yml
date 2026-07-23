@@ -30,7 +30,7 @@ runs:
 
     - name: Check Playwright Cache
       if: inputs.web-driver == 'playwright'
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       id: playwright-cache
       with:
         path: ~/.cache/ms-playwright
@@ -53,7 +53,7 @@ runs:
 
     - name: Retrieve Cached Rails Assets
       id: cache-assets
-      uses: actions/cache/restore@v5
+      uses: actions/cache/restore@v6
       with:
         path: |
           public/assets
@@ -63,7 +63,7 @@ runs:
 
     - name: Load Previous Turbo-Test Runtime Stats
       id: restore-parallel-spec
-      uses: actions/cache/restore@v5
+      uses: actions/cache/restore@v6
       with:
         path: tmp/turbo_rspec_runtime.log
         key: parallel-spec-system-runtimes-${{ github.sha }}_${{ github.run_attempt }}
@@ -95,7 +95,7 @@ runs:
 
     - name: Upload Screenshots
       if: failure()
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: rspec-screenshots
         path: ${{ inputs.failure-screenshot-dir }}

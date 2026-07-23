@@ -11,7 +11,7 @@ runs:
   steps:
     - name: Check for Existing Precompiled Assets
       id: check-asset-cache
-      uses: actions/cache/restore@v5
+      uses: actions/cache/restore@v6
       with:
         path: |
           public/assets
@@ -47,7 +47,7 @@ runs:
     - name: Cache Rails Precompiled Assets
       if: ${{ steps.check-asset-cache.outputs.cache-hit != 'true' }}
       id: lookup-cached-assets
-      uses: actions/cache/save@v5
+      uses: actions/cache/save@v6
       with:
         path: |
           public/assets
