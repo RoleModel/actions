@@ -111,10 +111,14 @@ jobs:
           bundler-cache: true
         background: true
 
+      # Guarded in the shell rather than with a step-level `if` so the step
+      # always completes and the `wait: [install-apt]` below always resolves.
       - name: Install system packages
         id: install-apt
-        if: ${{ inputs.apt_packages }}
-        run: sudo apt-get update && sudo apt-get install -y ${{ inputs.apt_packages }}
+        run: |
+          if [ -n "${{ inputs.apt_packages }}" ]; then
+            sudo apt-get update && sudo apt-get install -y ${{ inputs.apt_packages }}
+          fi
         background: true
 
       - name: Restore Asset Cache
@@ -168,10 +172,6 @@ jobs:
       # on node/yarn/assets too.
       - wait: [install-ruby]
 
-      - name: Setup Parallel Databases
-        run: bundle exec rake parallel:create parallel:load_schema
-        background: true
-
       - name: Rubocop
         if: ${{ inputs.rubocop_command }}
         run: ${{ inputs.rubocop_command }}
@@ -190,6 +190,17 @@ jobs:
           reporter: github-pr-check
         background: true
 
+      # Booting the app loads gems (poppler, vips, …) that dlopen the system
+      # libraries from apt_packages, so app-booting steps must also wait on
+      # install-apt — otherwise DB setup races the apt install and fails
+      # intermittently with e.g. "Typelib file for namespace 'Poppler' not
+      # found". Lint steps above don't boot the app, so they start sooner.
+      - wait: [install-apt]
+
+      - name: Setup Parallel Databases
+        run: bundle exec rake parallel:create parallel:load_schema
+        background: true
+
       # Yarn-only work can start as soon as node_modules are ready.
       - wait: [install-yarn]
 
@@ -198,8 +209,8 @@ jobs:
         run: ${{ inputs.js_lint_command }}
         background: true
 
-      # Needs gems + yarn (both already waited-for above) and the asset cache
-      # lookup, but nothing from apt_packages or the playwright cache.
+      # Needs gems + yarn + apt packages (all already waited-for above) and
+      # the asset cache lookup, but nothing from the playwright cache.
       - wait: [cache-assets]
 
       - name: Compile Assets
