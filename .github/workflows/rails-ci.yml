@@ -121,6 +121,10 @@ jobs:
           fi
         background: true
 
+      - name: Find Preinstalled Chrome
+        run: echo "GOOGLE_CHROME_BIN=$(which google-chrome || which google-chrome-stable)" >> "$GITHUB_ENV"
+        background: true
+
       - name: Restore Asset Cache
         id: cache-assets
         uses: actions/cache/restore@v6
