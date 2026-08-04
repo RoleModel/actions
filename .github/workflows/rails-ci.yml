@@ -85,6 +85,11 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: password
+        # Test data is throwaway every run, so put the data dir on tmpfs to
+        # eliminate checkpoint/fsync disk waits entirely — a slow-disk stall
+        # can't happen if there's no disk in the path.
+        options: >-
+          --tmpfs /var/lib/postgresql/data:rw,size=2g
 
     steps:
       - name: Checkout code
