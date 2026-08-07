@@ -141,7 +141,7 @@ jobs:
           key: >-
             rails-assets-${{ hashFiles('app/assets/images/**/*', 'app/assets/stylesheets/**/*',
             'app/assets/config/**/*', 'app/javascript/**/*', '*.config.js', '*.config.mjs',
-            '*.config.cjs', '*.config.ts', 'package.json', '.node-version', 'yarn.lock',
+            '*.config.cjs', '*.config.ts', '.node-version', 'yarn.lock',
             'Gemfile.lock') }}
         background: true
 
