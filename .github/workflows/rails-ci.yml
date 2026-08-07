@@ -125,6 +125,12 @@ jobs:
         run: echo "GOOGLE_CHROME_BIN=$(which google-chrome || which google-chrome-stable)" >> "$GITHUB_ENV"
         background: true
 
+      # The key has to cover how the assets are built, not just what goes into them.
+      # A bundler config decides chunking, output names and entry points, so a change
+      # there produces different files from identical sources — and if the key misses
+      # it, Compile Assets is skipped and the stale bundle is restored over the top,
+      # with every step still green. Config lives at the repo root by convention
+      # (webpack/vite/rollup/esbuild/tailwind/postcss), hence the *.config.* globs.
       - name: Restore Asset Cache
         id: cache-assets
         uses: actions/cache/restore@v6
@@ -132,7 +138,11 @@ jobs:
           path: |
             public/assets
             app/assets/builds
-          key: rails-assets-${{ hashFiles('app/assets/images/**/*', 'app/assets/stylesheets/**/*', 'app/javascript/**/*', 'yarn.lock', 'Gemfile.lock') }}
+          key: >-
+            rails-assets-${{ hashFiles('app/assets/images/**/*', 'app/assets/stylesheets/**/*',
+            'app/assets/config/**/*', 'app/javascript/**/*', '*.config.js', '*.config.mjs',
+            '*.config.cjs', '*.config.ts', 'package.json', '.node-version', 'yarn.lock',
+            'Gemfile.lock') }}
         background: true
 
       - name: Enable Corepack
