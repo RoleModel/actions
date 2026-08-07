@@ -132,7 +132,11 @@ jobs:
           path: |
             public/assets
             app/assets/builds
-          key: rails-assets-${{ hashFiles('app/assets/images/**/*', 'app/assets/stylesheets/**/*', 'app/javascript/**/*', 'yarn.lock', 'Gemfile.lock') }}
+          key: >-
+            rails-assets-${{ hashFiles('app/assets/images/**/*', 'app/assets/stylesheets/**/*',
+            'app/assets/config/**/*', 'app/javascript/**/*', '*.config.js', '*.config.mjs',
+            '*.config.cjs', '*.config.ts', '.node-version', 'yarn.lock',
+            'Gemfile.lock') }}
         background: true
 
       - name: Enable Corepack
