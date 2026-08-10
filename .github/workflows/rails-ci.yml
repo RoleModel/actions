@@ -3,37 +3,18 @@ name: Rails CI
 on:
   workflow_call:
     inputs:
-      runner:
-        description: Runner to use
-        type: string
-        default: blacksmith-8vcpu-ubuntu-2404
-      timeout:
-        description: Job timeout in minutes
-        type: number
-        default: 20
       apt_packages:
         description: Space-separated apt packages to install alongside setup (e.g. "libvips")
         type: string
-      rubocop_command:
-        description: Rubocop command to run (omit to skip)
-        type: string
-      dependency_audit_command:
-        description: Dependency audit command to run (omit to skip)
-        type: string
-      js_lint_command:
-        description: JS linting command to run (omit to skip)
-        type: string
+
       brakeman_version:
         description: Brakeman gem version to run via reviewdog (omit to skip, e.g. "8.0.5")
         type: string
-      postgres_version:
-        description: Postgres Docker image version tag
+
+      dependency_audit_command:
+        description: Dependency audit command to run (omit to skip)
         type: string
-        default: "17"
-      playwright:
-        description: Install the Playwright Chromium browser (for apps using capybara-playwright-driver)
-        type: boolean
-        default: false
+
       extra_env:
         description: >
           Additional non-secret environment variables, one KEY=VALUE per
@@ -43,6 +24,40 @@ on:
           `secrets.*` can't be referenced here since this is a `with:`
           input, evaluated before the caller's secrets are in scope.
         type: string
+
+      failure-screenshot-dir:
+        description: the directory where your test runner saves screenshots on failure
+        type: string
+        default: tmp/capybara
+
+      js_lint_command:
+        description: JS linting command to run (omit to skip)
+        type: string
+
+      playwright:
+        description: Install the Playwright Chromium browser (for apps using capybara-playwright-driver)
+        type: boolean
+        default: false
+
+      postgres_version:
+        description: Postgres Docker image version tag
+        type: string
+        default: "17"
+
+      rubocop_command:
+        description: Rubocop command to run (omit to skip)
+        type: string
+
+      runner:
+        description: Runner to use
+        type: string
+        default: blacksmith-8vcpu-ubuntu-2404
+
+      timeout:
+        description: Job timeout in minutes
+        type: number
+        default: 20
+
     secrets:
       RAILS_MASTER_KEY:
         description: Rails master key for decrypting credentials
@@ -284,7 +299,7 @@ jobs:
             uses: actions/upload-artifact@v7
             with:
               name: rspec-screenshots
-              path: tmp/capybara
+              path: ${{ inputs.failure-screenshot-dir }}
 
       - name: Cleanup
         uses: RoleModel/actions/test-cleanup@v1
