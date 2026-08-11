@@ -220,7 +220,7 @@ jobs:
 
       - name: Project Stats
         if: ${{ inputs.project_stats }}
-        uses: RoleModel/actions/project-stats@v1
+        uses: RoleModel/actions/project-stats@v3
         with:
           install-ruby: false
         background: true
