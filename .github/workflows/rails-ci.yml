@@ -44,6 +44,11 @@ on:
         type: string
         default: "17"
 
+      project_stats:
+        description: Run `bin/rails stats` and post the results to the job summary
+        type: boolean
+        default: false
+
       rubocop_command:
         description: Rubocop command to run (omit to skip)
         type: string
@@ -211,6 +216,13 @@ jobs:
         with:
           brakeman_version: ${{ inputs.brakeman_version }}
           reporter: github-pr-check
+        background: true
+
+      - name: Project Stats
+        if: ${{ inputs.project_stats }}
+        uses: RoleModel/actions/project-stats@v1
+        with:
+          install-ruby: false
         background: true
 
       # Booting the app loads gems (poppler, vips, …) that dlopen the system
