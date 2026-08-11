@@ -221,7 +221,7 @@ jobs:
       - name: Project Stats
         id: project-stats
         if: ${{ inputs.project_stats }}
-        uses: RoleModel/actions/project-stats@v3
+        uses: RoleModel/actions/project-stats@claude/project-stats-ci-integration-234e1e
         with:
           install-ruby: false
         background: true
