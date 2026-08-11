@@ -18,6 +18,18 @@ runs:
         bundler-cache: true
 
     - name: Run Stats Command and Capture Output
+      id: run-stats
       shell: bash
       run: |
-        bin/rails stats | ${{ github.action_path }}/scripts/format-stats >> $GITHUB_STEP_SUMMARY
+        table="$(bin/rails stats | ${{ github.action_path }}/scripts/format-stats)"
+        echo "$table" >> "$GITHUB_STEP_SUMMARY"
+        {
+          echo "table<<PROJECT_STATS_EOF"
+          echo "$table"
+          echo "PROJECT_STATS_EOF"
+        } >> "$GITHUB_OUTPUT"
+
+outputs:
+  table:
+    description: The Markdown table of `bin/rails stats` output
+    value: ${{ steps.run-stats.outputs.table }}
