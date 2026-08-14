@@ -47,7 +47,7 @@ on:
       project-stats:
         description: Run `bin/rails stats` and post the results to the job summary
         type: boolean
-        default: false
+        default: true
 
       rubocop_command:
         description: Rubocop command to run (omit to skip)
