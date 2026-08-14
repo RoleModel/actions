@@ -44,6 +44,11 @@ on:
         type: string
         default: "17"
 
+      project-stats:
+        description: Run `bin/rails stats` and post the results to the job summary
+        type: boolean
+        default: true
+
       rubocop_command:
         description: Rubocop command to run (omit to skip)
         type: string
@@ -213,6 +218,14 @@ jobs:
           reporter: github-pr-check
         background: true
 
+      - name: Project Stats
+        id: project-stats
+        if: ${{ inputs.project-stats }}
+        uses: RoleModel/actions/project-stats@claude/project-stats-ci-integration-234e1e
+        with:
+          install-ruby: false
+        background: true
+
       # Booting the app loads gems (poppler, vips, …) that dlopen the system
       # libraries from apt_packages, so app-booting steps must also wait on
       # install-apt — otherwise DB setup races the apt install and fails
@@ -300,6 +313,30 @@ jobs:
             with:
               name: rspec-screenshots
               path: ${{ inputs.failure-screenshot-dir }}
+
+          # Published here (grouped with the other end-of-run check runs)
+          # rather than right after Project Stats captures its output above,
+          # so it lands in the PR checks list alongside Test Results instead
+          # of appearing mid-install.
+          - name: Publish Project Stats Check
+            if: ${{ inputs.project-stats }}
+            uses: actions/github-script@v7
+            env:
+              STATS_TABLE: ${{ steps.project-stats.outputs.table }}
+            with:
+              script: |
+                await github.rest.checks.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: 'Project Stats',
+                  head_sha: context.payload.pull_request?.head.sha ?? context.sha,
+                  status: 'completed',
+                  conclusion: 'success',
+                  output: {
+                    title: 'Project Stats',
+                    summary: process.env.STATS_TABLE,
+                  },
+                })
 
       - name: Cleanup
         uses: RoleModel/actions/test-cleanup@v1
