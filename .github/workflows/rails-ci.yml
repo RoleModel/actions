@@ -44,7 +44,7 @@ on:
         type: string
         default: "17"
 
-      project_stats:
+      project-stats:
         description: Run `bin/rails stats` and post the results to the job summary
         type: boolean
         default: false
