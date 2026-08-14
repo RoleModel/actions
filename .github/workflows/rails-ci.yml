@@ -218,6 +218,13 @@ jobs:
           reporter: github-pr-check
         background: true
 
+      # Booting the app loads gems (poppler, vips, …) that dlopen the system
+      # libraries from apt_packages, so app-booting steps must also wait on
+      # install-apt — otherwise they race the apt install and fail
+      # intermittently with e.g. "Typelib file for namespace 'Poppler' not
+      # found". Lint steps above don't boot the app, so they start sooner.
+      - wait: [install-apt]
+
       - name: Project Stats
         id: project-stats
         if: ${{ inputs.project-stats }}
@@ -225,13 +232,6 @@ jobs:
         with:
           install-ruby: false
         background: true
-
-      # Booting the app loads gems (poppler, vips, …) that dlopen the system
-      # libraries from apt_packages, so app-booting steps must also wait on
-      # install-apt — otherwise DB setup races the apt install and fails
-      # intermittently with e.g. "Typelib file for namespace 'Poppler' not
-      # found". Lint steps above don't boot the app, so they start sooner.
-      - wait: [install-apt]
 
       - name: Setup Parallel Databases
         run: bundle exec rake parallel:create parallel:load_schema
