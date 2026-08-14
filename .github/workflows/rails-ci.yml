@@ -220,7 +220,7 @@ jobs:
 
       - name: Project Stats
         id: project-stats
-        if: ${{ inputs.project_stats }}
+        if: ${{ inputs.project-stats }}
         uses: RoleModel/actions/project-stats@claude/project-stats-ci-integration-234e1e
         with:
           install-ruby: false
@@ -319,7 +319,7 @@ jobs:
           # so it lands in the PR checks list alongside Test Results instead
           # of appearing mid-install.
           - name: Publish Project Stats Check
-            if: ${{ inputs.project_stats }}
+            if: ${{ inputs.project-stats }}
             uses: actions/github-script@v7
             env:
               STATS_TABLE: ${{ steps.project-stats.outputs.table }}
