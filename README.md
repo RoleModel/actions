@@ -71,7 +71,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: staging
           fetch-depth: 0
@@ -133,7 +133,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - uses: RoleModel/actions/compile-assets@v3
         id: check-asset-cache
@@ -155,7 +155,7 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - uses: RoleModel/actions/linting-and-non-system-tests@v3
         with:
@@ -179,7 +179,7 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       # Custom install steps may be added between checkout & test run if needed. e.g.
       # If your application processes ActiveStorage::Variant records you probably need the following step:
@@ -198,7 +198,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Capture Project Stats
         uses: RoleModel/actions/project-stats
