@@ -81,6 +81,71 @@ jobs:
         uses: RoleModel/actions/staging-auto-merge@v3
 ```
 
+## Rails CI (reusable workflow)
+
+`.github/workflows/rails-ci.yml` is a `workflow_call` reusable workflow that runs an entire Rails app's CI — linting, Brakeman, dependency audit, asset compilation/caching, and `parallel_rspec` — as a single job. It supersedes the composite actions below: use it for new projects, and prefer migrating an existing `ci.yml` to it over adding to the composite-action setup, since it schedules the independent setup steps (Ruby/gems, apt packages, Node/Yarn, asset cache, Brakeman, Rubocop, ESLint, dependency audit, Project Stats) to overlap with `background:`/`wait:`/`parallel:` step syntax instead of running them sequentially across multiple jobs.
+
+### Inputs
+
+- `apt_packages`: Space-separated apt packages to install alongside setup (e.g. "libvips")
+- `brakeman_version`: Brakeman gem version to run via reviewdog (omit to skip, e.g. "8.0.5")
+- `dependency_audit_command`: Dependency audit command to run (omit to skip)
+- `extra_env`: Additional non-secret environment variables, one KEY=VALUE per line (same format as a .env file). Use this for anything the app requires that isn't already covered by an existing input. For real secret values, use the `extra_secrets` secret instead — `secrets.*` can't be referenced here since this is a `with:` input, evaluated before the caller's secrets are in scope.
+- `failure-screenshot-dir`: the directory where your test runner saves screenshots on failure. Default: `tmp/capybara`
+- `js_lint_command`: JS linting command to run (omit to skip)
+- `playwright`: Install the Playwright Chromium browser (for apps using capybara-playwright-driver). Default: `false`
+- `postgres_version`: Postgres Docker image version tag. Default: `"17"`
+- `project-stats`: Run `bin/rails stats` and post the results to the job summary. Default: `true`
+- `rubocop_command`: Rubocop command to run (omit to skip)
+- `runner`: Runner to use. Default: `blacksmith-8vcpu-ubuntu-2404`
+- `timeout`: Job timeout in minutes. Default: `20`
+
+### Secrets
+
+- `RAILS_MASTER_KEY`: Rails master key for decrypting credentials
+- `BUNDLE_RUBYGEMS__PKG__GITHUB__COM`: Credential for the RoleModel RubyGems package registry
+- `extra_secrets`: Additional secret environment variables, one KEY=VALUE per line (same shape as `extra_env`). Pass real secret values through here, referencing the caller's own secrets context on the right-hand side of each line.
+
+`extra_env` and `extra_secrets` exist for the same reason (app-specific env vars the workflow doesn't already name), but land differently: `extra_env` is a `with:` input, evaluated before the caller's `secrets:` context is in scope, so it can only carry non-secret `KEY=VALUE` lines. `extra_secrets` is a real `secrets:` value, so it's the one to use for anything sensitive — reference the caller's own secrets on the right-hand side, e.g. `STRIPE_PRIVATE_KEY=${{ secrets.STRIPE_PRIVATE_KEY }}`.
+
+`project-stats` is a built-in input (default `true`) that publishes its own "Project Stats" GitHub check as part of the job. Callers of `rails-ci.yml` get this for free and don't need the separate standalone `project-stats` job shown in the composite-action example below.
+
+### Example ci.yml (basic)
+
+```yaml
+jobs:
+  ci:
+    uses: RoleModel/actions/.github/workflows/rails-ci.yml@v3
+    with:
+      rubocop_command: bundle exec rubocop --format github
+      dependency_audit_command: bin/bundler-audit && bin/brakeman --quiet --no-pager --exit-on-warn --exit-on-error
+      failure-screenshot-dir: tmp/screenshots
+    secrets: inherit
+```
+
+### Example ci.yml (with apt packages, Playwright, and app-specific env)
+
+```yaml
+jobs:
+  ci:
+    uses: RoleModel/actions/.github/workflows/rails-ci.yml@v3
+    with:
+      apt_packages: libvips
+      playwright: true
+      rubocop_command: bundle exec rubocop --format github
+      js_lint_command: yarn lint
+      dependency_audit_command: bin/bundler-audit
+      brakeman_version: "8.0.5"
+      failure-screenshot-dir: tmp/screenshots
+      extra_env: |
+        STRIPE_PUBLISHABLE_KEY=pk_test_placeholder
+    secrets:
+      RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
+      BUNDLE_RUBYGEMS__PKG__GITHUB__COM: ${{ secrets.BUNDLE_RUBYGEMS__PKG__GITHUB__COM }}
+      extra_secrets: |
+        STRIPE_PRIVATE_KEY=${{ secrets.STRIPE_PRIVATE_KEY }}
+```
+
 ## Shared workflow actions
 
 This is a combination of multiple composite actions that can be used to run your entire CI flow for a rails app using parallel_tests. Each action allow you to customize the machine, environment variables, and any custom install steps that are needed. It does require you to check out the code yourself, since some install steps might happen after that.
