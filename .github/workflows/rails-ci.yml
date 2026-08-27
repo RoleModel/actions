@@ -234,6 +234,7 @@ jobs:
         background: true
 
       - name: Setup Parallel Databases
+        id: setup-parallel-databases
         run: bundle exec rake parallel:create parallel:load_schema
         background: true
 
@@ -250,6 +251,7 @@ jobs:
       - wait: [cache-assets]
 
       - name: Compile Assets
+        id: compile-assets
         if: ${{ steps.cache-assets.outputs.cache-hit != 'true' }}
         run: bundle exec rails assets:precompile
         background: true
@@ -257,11 +259,21 @@ jobs:
       - wait: [cache-playwright]
 
       - name: Install Playwright Chromium Browser
+        id: install-playwright
         if: ${{ inputs.playwright && steps.cache-playwright.outputs.cache-hit != 'true' }}
         run: yarn playwright install --with-deps chromium
         background: true
 
-      - wait-all: true
+      # Run Rspec Tests only needs gems/ruby, apt packages, yarn/node_modules,
+      # assets, Playwright, and the parallel test DBs — not Rubocop, ESLint,
+      # Brakeman, Dependency Audit, or Project Stats, which publish their own
+      # check results independently later in the job. Waiting on all of them
+      # here (the previous `wait-all: true`) measured as ~11-22s of pure idle
+      # time per run, gated on whichever of those unrelated steps ran longest
+      # (usually Brakeman) — wasted on every CI run of every app using this
+      # workflow. They still run concurrently with Rspec; see the `wait-all`
+      # below that joins them again before the job concludes.
+      - wait: [install-ruby, install-apt, install-yarn, compile-assets, install-playwright, setup-parallel-databases]
 
       # Doesn't need to finish before tests start, only before the job ends —
       # the wait below is a cheap correctness net, not an expected delay,
@@ -282,7 +294,13 @@ jobs:
         env:
           CAPYBARA_DRIVER: js
 
-      - wait: [save-asset-cache]
+      # Rubocop, ESLint, Brakeman, Dependency Audit, and Project Stats were
+      # no longer joined by the narrower `wait:` above `Run Rspec Tests`, so
+      # they're still running in the background at this point. Join all of
+      # them (along with save-asset-cache) here so a lint/security failure
+      # still fails the job and `steps.project-stats.outputs.table` is ready
+      # before the parallel block below publishes it.
+      - wait-all: true
 
       # None of these read each other's output — all four only consume
       # artifacts already produced by Run Rspec Tests above.
