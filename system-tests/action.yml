@@ -73,8 +73,6 @@ runs:
       shell: bash
       run: bundle exec rake parallel:create parallel:load_schema
 
-    # --runtime-log must be passed explicitly, since parallel_rspec defaults to
-    # reading tmp/parallel_runtime_rspec.log rather than the path restored above.
     - name: Run Rspec Tests
       shell: bash
       run: bundle exec parallel_rspec --verbose-command --runtime-log tmp/turbo_rspec_runtime.log spec/system

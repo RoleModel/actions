@@ -277,11 +277,6 @@ jobs:
           key: ${{ steps.cache-assets.outputs.cache-primary-key }}
         background: true
 
-      # --runtime-log must be passed explicitly. parallel_rspec reads
-      # tmp/parallel_runtime_rspec.log by default, but apps write the log to
-      # tmp/turbo_rspec_runtime.log (the rolemodel_rails generator template's
-      # path). Without this flag parallel_rspec finds no runtimes and silently
-      # falls back to grouping by file size, leaving cores idle for minutes.
       - name: Run Rspec Tests
         run: bundle exec parallel_rspec --verbose --runtime-log tmp/turbo_rspec_runtime.log spec/
         env:
