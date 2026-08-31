@@ -64,9 +64,11 @@ runs:
       shell: bash
       run: ${{ inputs.linting_step_command }}
 
+    # --runtime-log must be passed explicitly, since parallel_rspec defaults to
+    # reading tmp/parallel_runtime_rspec.log rather than the path restored above.
     - name: Run Rspec Tests
       shell: bash
-      run: bundle exec parallel_rspec --verbose --exclude-pattern "/system/"
+      run: bundle exec parallel_rspec --verbose --runtime-log tmp/turbo_rspec_runtime.log --exclude-pattern "/system/"
 
     - name: Publish Test Results
       uses: mikepenz/action-junit-report@v6
