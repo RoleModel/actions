@@ -1,0 +1,33 @@
+name: Bump Version
+description: Updates the version in a Ruby version file or package.json. Does not commit; pair with push-version-tag.
+inputs:
+  bump:
+    description: >
+      One of `major`, `minor`, `patch`, or an explicit version (e.g. `2.0.0.rc1`).
+    required: true
+
+  version-file:
+    description: >
+      File holding the version, either as a `VERSION = "x.y.z"` constant or a `"version": "x.y.z"` key.
+      Defaults to the single `lib/*/version.rb` in the repository.
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Bump version
+      id: bump
+      shell: bash
+      env:
+        BUMP: ${{ inputs.bump }}
+        VERSION_FILE: ${{ inputs.version-file }}
+      run: ruby "$GITHUB_ACTION_PATH/bump_version.rb" "$BUMP" "$VERSION_FILE"
+
+outputs:
+  version:
+    description: The new version
+    value: ${{ steps.bump.outputs.version }}
+  previous-version:
+    description: The version before the bump
+    value: ${{ steps.bump.outputs.previous-version }}

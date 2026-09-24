@@ -1,5 +1,9 @@
 # RoleModel/actions
 
+## [v3.12.0] Sep 24, 2026
+
+- Add `bump-version` and `push-version-tag` composite actions, extracted from the `bin/bump_version` + `bin/tag` scripts duplicated across our gems. `bump-version` rewrites a Ruby `VERSION` constant or a `package.json` version and outputs it; `push-version-tag` commits, tags, and pushes atomically. Steps in between can add whatever else belongs in the version commit.
+
 ## [v3.11.3] Aug 31, 2026
 
 - Pass `--runtime-log tmp/turbo_rspec_runtime.log` to `parallel_rspec` in `rails-ci.yml` and both composite actions. They cached the runtime log at that path, but `parallel_rspec` reads `tmp/parallel_runtime_rspec.log`, so it found nothing and silently grouped specs by file size — leaving ~30% of a 16-process runner idle. Also renames the two cache steps to "Load/Save Spec Runtime Stats". (#33)

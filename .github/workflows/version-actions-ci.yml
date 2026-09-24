@@ -1,0 +1,49 @@
+name: version-actions-ci
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - bump-version/**
+      - push-version-tag/**
+      - .github/workflows/version-actions-ci.yml
+  pull_request:
+    paths:
+      - bump-version/**
+      - push-version-tag/**
+      - .github/workflows/version-actions-ci.yml
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Run tests
+        run: ruby bump-version/test/bump_version_test.rb
+
+      - name: Stage a fixture gem against a scratch remote
+        run: |
+          git init --bare "$RUNNER_TEMP/origin.git"
+          git remote set-url origin "$RUNNER_TEMP/origin.git"
+          mkdir -p lib/fixture
+          echo 'VERSION = "1.4.2"' > lib/fixture/version.rb
+          git add lib/fixture
+          git -c user.name=ci -c user.email=ci@example.com commit --message fixture
+
+      - uses: ./bump-version
+        id: bump
+        with:
+          bump: minor
+
+      - uses: ./push-version-tag
+        with:
+          version: ${{ steps.bump.outputs.version }}
+          branch: release-check
+
+      - name: Verify the remote received the version commit and tag
+        run: |
+          test "$(git -C "$RUNNER_TEMP/origin.git" show release-check:lib/fixture/version.rb)" = 'VERSION = "1.5.0"'
+          test "$(git -C "$RUNNER_TEMP/origin.git" rev-parse v1.5.0^{commit})" = "$(git -C "$RUNNER_TEMP/origin.git" rev-parse release-check)"
