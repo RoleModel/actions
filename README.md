@@ -81,6 +81,80 @@ jobs:
         uses: RoleModel/actions/staging-auto-merge@v3
 ```
 
+## bump-version & push-version-tag
+
+Two composite actions for cutting a version from GitHub Actions instead of a developer's machine. `bump-version` rewrites the version in a file and outputs it. `push-version-tag` commits every tracked change as that version, tags it, and pushes the commit and tag atomically, so a rejected branch push never leaves a published tag behind. Anything that has to land in the version commit (lockfiles, a second version file) goes in steps between the two.
+
+Neither action checks out the code or picks a token: the push uses whatever credentials `actions/checkout` persisted. Pushes made with the default `GITHUB_TOKEN` do not trigger other workflows (e.g. one listening for `v*` tags), so use a GitHub App token or deploy key when something downstream should run.
+
+`bump-version` inputs:
+- `bump`*: `major`, `minor`, `patch`, or an explicit version (e.g. `2.0.0.rc1`)
+- `version-file`: File holding a `VERSION = "x.y.z"` constant or a `"version": "x.y.z"` key. Default: the single `lib/*/version.rb`
+
+`bump-version` outputs: `version`, `previous-version`
+
+`push-version-tag` inputs:
+- `version`*: The version being released
+- `tag-prefix`: Default: `v`
+- `branch`: Branch to push the version commit to. Default: `${{ github.ref_name }}`
+- `git-user-name` / `git-user-email`: Commit and tag author. Default: `github-actions[bot]`
+
+Example (a gem that also ships an npm package):
+
+```yaml
+name: Bump Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        type: choice
+        options: [patch, minor, major]
+        default: minor
+
+concurrency:
+  group: ${{ github.workflow }}
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BUNDLE_FROZEN: "false" # the version change has to reach Gemfile.lock
+    steps:
+      - uses: actions/create-github-app-token@v3
+        id: app-token
+        with:
+          client-id: ${{ secrets.VERSION_MANAGER_CLIENT_ID }}
+          private-key: ${{ secrets.VERSION_MANAGER_PRIVATE_KEY }}
+
+      - uses: actions/checkout@v7
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - uses: RoleModel/actions/bump-version@v3
+        id: bump
+        with:
+          bump: ${{ inputs.bump }}
+
+      - uses: RoleModel/actions/bump-version@v3
+        with:
+          bump: ${{ steps.bump.outputs.version }}
+          version-file: package.json
+
+      - run: bundle install
+
+      - uses: RoleModel/actions/push-version-tag@v3
+        with:
+          version: ${{ steps.bump.outputs.version }}
+          git-user-name: ${{ steps.app-token.outputs.app-slug }}[bot]
+          git-user-email: ${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com
+```
+
 ## Rails CI (reusable workflow)
 
 `.github/workflows/rails-ci.yml` is a `workflow_call` reusable workflow that runs an entire Rails app's CI — linting, Brakeman, dependency audit, asset compilation/caching, and `parallel_rspec` — as a single job. It supersedes the composite actions below: use it for new projects, and prefer migrating an existing `ci.yml` to it over adding to the composite-action setup, since it schedules the independent setup steps (Ruby/gems, apt packages, Node/Yarn, asset cache, Brakeman, Rubocop, ESLint, dependency audit, Project Stats) to overlap with `background:`/`wait:`/`parallel:` step syntax instead of running them sequentially across multiple jobs.
