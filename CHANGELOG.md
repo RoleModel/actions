@@ -1,5 +1,9 @@
 # RoleModel/actions
 
+## [v3.13.0] Oct 9, 2026
+
+- Add `bump-version` and `push-version-tag` composite actions, extracted from the `bin/bump_version` + `bin/tag` scripts duplicated across our gems. `bump-version` rewrites a Ruby `VERSION` constant or a `package.json` version and outputs it; `push-version-tag` commits, tags, and pushes atomically. Steps in between can add whatever else belongs in the version commit.
+
 ## [v3.12.0] Oct 8, 2026
 
 - Stop setting `CAPYBARA_DRIVER: js` in `rails-ci.yml`, so specs written for `rack_test` no longer run in a browser. To keep the old behavior, add `CAPYBARA_DRIVER=js` to `extra_env`.
