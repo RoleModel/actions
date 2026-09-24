@@ -20,6 +20,8 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the scratch remote rejects pushes from a shallow clone
 
       - name: Run tests
         run: ruby bump-version/test/bump_version_test.rb
