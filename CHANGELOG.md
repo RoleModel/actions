@@ -2,7 +2,7 @@
 
 ## [v3.12.0] Sep 24, 2026
 
-- Add `bump-version` and `push-version-tag` composite actions, extracted from the `bin/bump_version` + `bin/tag` scripts duplicated across our gems. `bump-version` rewrites a Ruby `VERSION` constant or a `package.json` version and outputs it; `push-version-tag` commits, tags, and pushes atomically. Steps in between can add whatever else belongs in the version commit.
+- Add `bump-version` and `push-version-tag` composite actions, extracted from the `bin/bump_version` + `bin/tag` scripts duplicated across our gems. `bump-version` rewrites a Ruby `VERSION` constant or a `package.json` version and outputs it; `push-version-tag` commits, tags, and pushes atomically. Steps in between can add whatever else belongs in the version commit. (#34)
 
 ## [v3.11.3] Aug 31, 2026
 
