@@ -52,8 +52,10 @@ runs:
       uses: actions/cache/restore@v6
       with:
         path: tmp/turbo_rspec_runtime.log
-        key: parallel-spec-non-system-runtimes-${{ github.sha }}_${{ github.run_attempt }}
-        restore-keys: parallel-spec-non-system-runtimes-
+        key: parallel-spec-non-system-runtimes-${{ github.head_ref || github.ref_name }}-${{ github.sha }}
+        restore-keys: |
+          parallel-spec-non-system-runtimes-${{ github.head_ref || github.ref_name }}-
+          parallel-spec-non-system-runtimes-
 
     - name: Setup Parallel Databases
       shell: bash
@@ -68,9 +70,16 @@ runs:
       shell: bash
       run: bundle exec parallel_rspec --verbose --runtime-log tmp/turbo_rspec_runtime.log --exclude-pattern "/system/"
 
+    - name: Save Turbo-Test Runtime Stats
+      if: always()
+      uses: actions/cache/save@v5
+      with:
+        path: tmp/turbo_rspec_runtime.log
+        key: parallel-spec-non-system-runtimes-${{ github.head_ref || github.ref_name }}-${{ github.sha }}
+
     - name: Publish Test Results
       uses: mikepenz/action-junit-report@v6
-      if: success() || failure()
+      if: always()
       with:
         check_name: Test Results
         report_paths: tmp/rspec-*.xml
