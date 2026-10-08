@@ -279,8 +279,6 @@ jobs:
 
       - name: Run Rspec Tests
         run: bundle exec parallel_rspec --verbose --runtime-log tmp/turbo_rspec_runtime.log spec/
-        env:
-          CAPYBARA_DRIVER: js
 
       - wait: [save-asset-cache]
 
