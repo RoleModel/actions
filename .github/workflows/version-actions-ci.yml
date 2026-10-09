@@ -70,4 +70,4 @@ jobs:
           test "$(git -C "$RUNNER_TEMP/origin.git" show release-check:lib/fixture/version.rb)" = 'VERSION = "1.5.0"'
           git -C "$RUNNER_TEMP/origin.git" show release-check:CHANGELOG.md | grep -qx '## \[v1.5.0\] .*'
           git -C "$RUNNER_TEMP/origin.git" show release-check:CHANGELOG.md | grep -qx -- '- Second bullet'
-          test "$(git -C "$RUNNER_TEMP/origin.git" rev-parse v1.5.0^{commit})" = "$(git -C "$RUNNER_TEMP/origin.git" rev-parse release-check)"
+          test "$(git -C "$RUNNER_TEMP/origin.git" rev-parse "v1.5.0^{commit}")" = "$(git -C "$RUNNER_TEMP/origin.git" rev-parse release-check)"
