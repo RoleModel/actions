@@ -8,16 +8,8 @@ on:
         type: string
 
       brakeman_version:
-        description: >
-          Run Brakeman (omit to skip). If Gemfile.lock includes brakeman, the
-          app's bundled version always runs. Otherwise, "gemfile" fails the
-          job and a version (e.g. "8.0.5") is installed with `gem install`.
+        description: Set to any value (e.g. "gemfile") to run the app's bundled Brakeman (omit to skip)
         type: string
-
-      brakeman_fail_on_warnings:
-        description: Fail the job when Brakeman reports warnings or errors
-        type: boolean
-        default: false
 
       dependency_audit_command:
         description: Dependency audit command to run (omit to skip)
@@ -218,24 +210,9 @@ jobs:
         run: ${{ inputs.dependency_audit_command }}
         background: true
 
-      - name: Detect Brakeman
-        id: brakeman
-        if: ${{ inputs.brakeman_version }}
-        env:
-          BRAKEMAN_VERSION: ${{ inputs.brakeman_version }}
-        run: |
-          if grep -qE '^    brakeman \(' Gemfile.lock 2>/dev/null; then
-            echo "source=bundle" >> "$GITHUB_OUTPUT"
-          elif [ "$BRAKEMAN_VERSION" = "gemfile" ]; then
-            echo "::error::brakeman_version is 'gemfile', but Gemfile.lock doesn't include brakeman"
-            exit 1
-          else
-            echo "source=gem" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Brakeman
-        if: ${{ steps.brakeman.outputs.source == 'bundle' }}
-        run: bundle exec brakeman --quiet --no-pager --format github ${{ !inputs.brakeman_fail_on_warnings && '--no-exit-on-warn --no-exit-on-error' || '' }}
+        if: ${{ inputs.brakeman_version }}
+        run: bundle exec brakeman --quiet --no-pager --no-exit-on-warn --no-exit-on-error --format junit --output tmp/brakeman.xml
         background: true
 
       # Booting the app loads gems (poppler, vips, …) that dlopen the system
@@ -244,18 +221,6 @@ jobs:
       # intermittently with e.g. "Typelib file for namespace 'Poppler' not
       # found". Lint steps above don't boot the app, so they start sooner.
       - wait: [install-apt]
-
-      # Behind the apt barrier because `gem install` needs the network, and
-      # needrestart restarts systemd-resolved at the end of the apt install,
-      # briefly refusing DNS lookups.
-      - name: Brakeman
-        if: ${{ steps.brakeman.outputs.source == 'gem' }}
-        env:
-          BRAKEMAN_VERSION: ${{ inputs.brakeman_version }}
-        run: |
-          gem install brakeman --version "$BRAKEMAN_VERSION" --no-document
-          brakeman --quiet --no-pager --format github ${{ !inputs.brakeman_fail_on_warnings && '--no-exit-on-warn --no-exit-on-error' || '' }}
-        background: true
 
       - name: Project Stats
         id: project-stats
@@ -314,8 +279,8 @@ jobs:
 
       - wait: [save-asset-cache]
 
-      # None of these read each other's output — all four only consume
-      # artifacts already produced by Run Rspec Tests above.
+      # None of these read each other's output — they only consume
+      # artifacts already produced by the steps above.
       - parallel:
           - name: Save Spec Runtime Stats
             if: always()
@@ -330,6 +295,14 @@ jobs:
             with:
               check_name: Test Results
               report_paths: tmp/rspec-*.xml
+              detailed_summary: true
+
+          - name: Publish Brakeman Results
+            uses: mikepenz/action-junit-report@v6
+            if: ${{ always() && inputs.brakeman_version }}
+            with:
+              check_name: Brakeman
+              report_paths: tmp/brakeman.xml
               detailed_summary: true
 
           - name: Analyze Test Runtimes

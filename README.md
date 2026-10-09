@@ -88,8 +88,7 @@ jobs:
 ### Inputs
 
 - `apt_packages`: Space-separated apt packages to install alongside setup (e.g. "libvips")
-- `brakeman_version`: Run Brakeman (omit to skip). If `Gemfile.lock` includes `brakeman`, the app's bundled version always runs. Otherwise, `gemfile` fails the job and a version (e.g. `"8.0.5"`) is installed with `gem install`. See [Brakeman](#brakeman) below.
-- `brakeman_fail_on_warnings`: Fail the job when Brakeman reports warnings or errors. Default: `false`
+- `brakeman_version`: Set to any value (e.g. `"gemfile"`) to run `bundle exec brakeman` and publish its warnings as a "Brakeman" check (omit to skip). Requires `brakeman` in the app's Gemfile; the value is no longer used as a version.
 - `dependency_audit_command`: Dependency audit command to run (omit to skip)
 - `extra_env`: Additional non-secret environment variables, one KEY=VALUE per line (same format as a .env file). Use this for anything the app requires that isn't already covered by an existing input. For real secret values, use the `extra_secrets` secret instead — `secrets.*` can't be referenced here since this is a `with:` input, evaluated before the caller's secrets are in scope.
 - `failure-screenshot-dir`: the directory where your test runner saves screenshots on failure. Default: `tmp/capybara`
@@ -108,12 +107,6 @@ jobs:
 - `extra_secrets`: Additional secret environment variables, one KEY=VALUE per line (same shape as `extra_env`). Pass real secret values through here, referencing the caller's own secrets context on the right-hand side of each line.
 
 `extra_env` and `extra_secrets` exist for the same reason (app-specific env vars the workflow doesn't already name), but land differently: `extra_env` is a `with:` input, evaluated before the caller's `secrets:` context is in scope, so it can only carry non-secret `KEY=VALUE` lines. `extra_secrets` is a real `secrets:` value, so it's the one to use for anything sensitive — reference the caller's own secrets on the right-hand side, e.g. `STRIPE_PRIVATE_KEY=${{ secrets.STRIPE_PRIVATE_KEY }}`.
-
-### Brakeman
-
-Brakeman runs as `bundle exec brakeman` whenever the app's `Gemfile.lock` includes `brakeman`, so it uses the app's pinned version and `config/brakeman.ignore`, and needs no network access. Warnings appear as GitHub Actions annotations (`--format github`, Brakeman 5.1+) on the job and in the PR's changed files; GitHub shows at most 10 warning annotations per step, so check the step log for the full list. With `brakeman_fail_on_warnings: false` (the default), warnings never fail the job.
-
-Any non-empty `brakeman_version` turns Brakeman on, and the bundled gem wins over an explicit version. Only apps without `brakeman` in their bundle use the version: it's `gem install`ed after the apt packages finish installing, since needrestart restarts `systemd-resolved` at the end of `apt-get install` and briefly breaks DNS. `gemfile` with no `brakeman` in `Gemfile.lock` fails the job rather than silently skipping the scan. Adding `brakeman` to the app's `Gemfile` is the recommended setup.
 
 `project-stats` is a built-in input (default `true`) that publishes its own "Project Stats" GitHub check as part of the job. Callers of `rails-ci.yml` get this for free and don't need the separate standalone `project-stats` job shown in the composite-action example below.
 
@@ -142,7 +135,7 @@ jobs:
       rubocop_command: bundle exec rubocop --format github
       js_lint_command: yarn lint
       dependency_audit_command: bin/bundler-audit
-      brakeman_version: "8.0.5"
+      brakeman_version: gemfile
       failure-screenshot-dir: tmp/screenshots
       extra_env: |
         STRIPE_PUBLISHABLE_KEY=pk_test_placeholder
