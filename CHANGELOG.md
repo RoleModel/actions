@@ -2,7 +2,8 @@
 
 ## [v3.13.0] Oct 9, 2026
 
-- Add `bump-version` and `push-version-tag` composite actions, extracted from the `bin/bump_version` + `bin/tag` scripts duplicated across our gems. `bump-version` rewrites a Ruby `VERSION` constant or a `package.json` version and outputs it; `push-version-tag` commits, tags, and pushes atomically. Steps in between can add whatever else belongs in the version commit. (#34)
+- Add a `release.yml` reusable workflow that cuts a release end to end. A `workflow_dispatch` run bumps the version, updates lockfiles, adds a changelog entry, and pushes the version commit and tag with a GitHub App token. The tag push (or one made by hand) creates the GitHub release and publishes to RubyGems and/or npm with trusted publishing. (#34)
+- Add `bump-version`, `changelog-entry`, and `push-version-tag` composite actions, extracted from the `bin/bump_version` + `bin/tag` scripts duplicated across our gems. `bump-version` bumps a Ruby `VERSION` constant or `package.json` (both, for a gem that ships an npm package). `changelog-entry` drafts the entry from commits when no description is given. `push-version-tag` commits, tags, and pushes atomically. (#34)
 
 ## [v3.12.0] Oct 8, 2026
 

@@ -1,0 +1,148 @@
+name: Release
+
+# Called from a workflow with two triggers: `workflow_dispatch` runs `bump`, which pushes a version tag with a
+# GitHub App token, and that tag push (like one made by hand) runs `release` and the publish jobs. A push made
+# with the default GITHUB_TOKEN wouldn't trigger the caller again, hence the App.
+
+on:
+  workflow_call:
+    inputs:
+      bump:
+        description: One of `major`, `minor`, `patch`, or an explicit version (e.g. `2.0.0.rc1`).
+        type: string
+        default: minor
+
+      changelog:
+        description: Changelog bullets, separated by `$>` or newlines. Blank drafts them from the commits since the last release.
+        type: string
+        default: ''
+
+      version-file:
+        description: File holding the version. Default the single `lib/*/version.rb`, else `package.json`.
+        type: string
+        default: ''
+
+      app-client-id:
+        description: Client ID of the GitHub App that pushes the version commit and tag.
+        type: string
+        required: true
+
+      publish-gem:
+        description: Publish the gem to RubyGems with trusted publishing.
+        type: boolean
+        default: false
+
+      publish-npm:
+        description: Publish the package to npm with trusted publishing.
+        type: boolean
+        default: false
+
+    secrets:
+      app-private-key:
+        description: Private key of the GitHub App.
+        required: true
+
+jobs:
+  bump:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read # pushes with the App token
+    env:
+      BUNDLE_FROZEN: 'false' # the version change has to reach Gemfile.lock
+    steps:
+      - uses: actions/create-github-app-token@v3
+        id: app-token
+        with:
+          client-id: ${{ inputs.app-client-id }}
+          private-key: ${{ secrets.app-private-key }}
+
+      - uses: actions/checkout@v7
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          fetch-depth: 0 # a drafted changelog entry reads the commits since the last tag
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: ${{ hashFiles('Gemfile.lock') != '' }}
+
+      - uses: RoleModel/actions/bump-version@v3
+        id: bump
+        with:
+          bump: ${{ inputs.bump }}
+          version-file: ${{ inputs.version-file }}
+
+      - name: Update Gemfile.lock
+        if: hashFiles('Gemfile.lock') != ''
+        run: bundle install
+
+      - name: Update package-lock.json
+        if: hashFiles('package-lock.json') != ''
+        run: npm install --package-lock-only --ignore-scripts
+
+      - uses: RoleModel/actions/changelog-entry@v3
+        if: hashFiles('CHANGELOG.md') != ''
+        with:
+          version: ${{ steps.bump.outputs.version }}
+          previous-version: ${{ steps.bump.outputs.previous-version }}
+          description: ${{ inputs.changelog }}
+
+      - uses: RoleModel/actions/push-version-tag@v3
+        with:
+          version: ${{ steps.bump.outputs.version }}
+          git-user-name: ${{ steps.app-token.outputs.app-slug }}[bot]
+          git-user-email: ${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com
+
+  release:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Create GitHub release
+        run: gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  # RubyGems trusted publisher: workflow `release.yml`, workflow repository RoleModel/actions.
+  publish-gem:
+    needs: release
+    if: inputs.publish-gem
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # `rake release` pushes the tag, which already exists
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - uses: rubygems/release-gem@v1
+
+  # npm trusted publisher: the caller's workflow file, in the package's own repository.
+  publish-npm:
+    needs: release
+    if: inputs.publish-npm
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24 # trusted publishing needs npm 11.5.1+
+          registry-url: https://registry.npmjs.org
+
+      - run: npm publish --access public

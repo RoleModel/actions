@@ -1,5 +1,7 @@
 name: Bump Version
-description: Updates the version in a Ruby version file or package.json. Does not commit; pair with push-version-tag.
+description: >
+  Updates the version in a Ruby version file or package.json, and package.json alongside a gem that has one.
+  Does not commit; pair with push-version-tag.
 inputs:
   bump:
     description: >
@@ -9,7 +11,7 @@ inputs:
   version-file:
     description: >
       File holding the version, either as a `VERSION = "x.y.z"` constant or a `"version": "x.y.z"` key.
-      Defaults to the single `lib/*/version.rb` in the repository.
+      Defaults to the single `lib/*/version.rb` in the repository, else `package.json`.
     required: false
     default: ''
 
@@ -22,7 +24,13 @@ runs:
       env:
         BUMP: ${{ inputs.bump }}
         VERSION_FILE: ${{ inputs.version-file }}
-      run: ruby "$GITHUB_ACTION_PATH/bump_version.rb" "$BUMP" "$VERSION_FILE"
+      run: |
+        gem install thor --user-install --conservative --no-document --silent
+        case "$BUMP" in
+          major|minor|patch) flag="--$BUMP" ;;
+          *) flag="--version=$BUMP" ;;
+        esac
+        ruby "$GITHUB_ACTION_PATH/version_bumper.rb" ${VERSION_FILE:+"$VERSION_FILE"} "$flag"
 
 outputs:
   version:

@@ -1,0 +1,47 @@
+name: Changelog Entry
+description: >
+  Adds the newest release to the top of a changelog. Without a description it drafts one from the commits since
+  the previous release, or leaves a placeholder, so no release goes unrecorded. Does not commit; pair with
+  push-version-tag.
+inputs:
+  version:
+    description: The version being released (e.g. the `version` output of bump-version).
+    required: true
+
+  description:
+    description: >
+      Bullets for the entry, separated by `$>` or newlines. Leave blank to draft them from the commits since
+      `previous-version`.
+    required: false
+    default: ''
+
+  previous-version:
+    description: >
+      The version released before this one (e.g. the `previous-version` output of bump-version). A blank
+      description is drafted from the commits since its tag; this needs the history, so check out with
+      `fetch-depth: 0`.
+    required: false
+    default: ''
+
+  changelog-file:
+    description: The changelog to update.
+    required: false
+    default: CHANGELOG.md
+
+  tag-prefix:
+    description: Prefix of the release's tag name, used in its heading and link.
+    required: false
+    default: v
+
+runs:
+  using: composite
+  steps:
+    - name: Add changelog entry
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        DESCRIPTION: ${{ inputs.description }}
+        PREVIOUS_VERSION: ${{ inputs.previous-version }}
+        CHANGELOG_FILE: ${{ inputs.changelog-file }}
+        TAG_PREFIX: ${{ inputs.tag-prefix }}
+      run: ruby "$GITHUB_ACTION_PATH/changelog_entry.rb" "$VERSION"

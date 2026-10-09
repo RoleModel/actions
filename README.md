@@ -81,78 +81,129 @@ jobs:
         uses: RoleModel/actions/staging-auto-merge@v3
 ```
 
-## bump-version & push-version-tag
+## Release (reusable workflow)
 
-Two composite actions for cutting a version from GitHub Actions instead of a developer's machine. `bump-version` rewrites the version in a file and outputs it. `push-version-tag` commits every tracked change as that version, tags it, and pushes the commit and tag atomically, so a rejected branch push never leaves a published tag behind. Anything that has to land in the version commit (lockfiles, a second version file) goes in steps between the two.
+`.github/workflows/release.yml` is a `workflow_call` reusable workflow that cuts a release end to end: version bump, changelog entry, version commit and tag, GitHub release, and publishing to RubyGems and/or npm with trusted publishing. Call it from a workflow with two triggers:
 
-Neither action checks out the code or picks a token: the push uses whatever credentials `actions/checkout` persisted. Pushes made with the default `GITHUB_TOKEN` do not trigger other workflows (e.g. one listening for `v*` tags), so use a GitHub App token or deploy key when something downstream should run.
-
-`bump-version` inputs:
-- `bump`*: `major`, `minor`, `patch`, or an explicit version (e.g. `2.0.0.rc1`)
-- `version-file`: File holding a `VERSION = "x.y.z"` constant or a `"version": "x.y.z"` key. Default: the single `lib/*/version.rb`
-
-`bump-version` outputs: `version`, `previous-version`
-
-`push-version-tag` inputs:
-- `version`*: The version being released
-- `tag-prefix`: Default: `v`
-- `branch`: Branch to push the version commit to. Default: `${{ github.ref_name }}`
-- `git-user-name` / `git-user-email`: Commit and tag author. Default: `github-actions[bot]`
-
-Example (a gem that also ships an npm package):
+- **`workflow_dispatch`** (the Actions tab) runs the `bump` job. It bumps the version, updates `Gemfile.lock` and `package-lock.json` if present, adds a `CHANGELOG.md` entry if there's a changelog, then commits, tags and pushes with a GitHub App token.
+- **A `v*` tag push** runs the `release` and publish jobs. That tag push comes from the `bump` job, or from someone pushing a tag by hand. A push made with the default `GITHUB_TOKEN` wouldn't trigger the workflow again, which is why the `bump` job uses an App token.
 
 ```yaml
-name: Bump Version
+# .github/workflows/release.yml
+name: Release
 
 on:
   workflow_dispatch:
     inputs:
       bump:
+        description: major, minor, patch, or an explicit version
         type: choice
         options: [patch, minor, major]
         default: minor
+      changelog:
+        description: Changelog entry (separate bullets with $>). Leave blank to draft it from the commits.
+        type: string
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+  id-token: write
 
 concurrency:
   group: ${{ github.workflow }}
 
 jobs:
-  bump:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    env:
-      BUNDLE_FROZEN: "false" # the version change has to reach Gemfile.lock
-    steps:
-      - uses: actions/create-github-app-token@v3
-        id: app-token
-        with:
-          client-id: ${{ secrets.VERSION_MANAGER_CLIENT_ID }}
-          private-key: ${{ secrets.VERSION_MANAGER_PRIVATE_KEY }}
+  release:
+    uses: RoleModel/actions/.github/workflows/release.yml@v3
+    with:
+      bump: ${{ inputs.bump }}
+      changelog: ${{ inputs.changelog }}
+      app-client-id: ${{ vars.RMS_VERSION_MANAGER_CLIENT_ID }}
+      publish-gem: true
+    secrets:
+      app-private-key: ${{ secrets.RMS_VERSION_MANAGER_CERT }}
+```
 
-      - uses: actions/checkout@v7
-        with:
-          token: ${{ steps.app-token.outputs.token }}
+### Inputs
 
-      - uses: ruby/setup-ruby@v1
-        with:
-          bundler-cache: true
+- `app-client-id`*: Client ID of the GitHub App that pushes the version commit and tag
+- `bump`: `major`, `minor`, `patch`, or an explicit version (e.g. `2.0.0.rc1`). Default: `minor`
+- `changelog`: Bullets for the changelog entry, separated by `$>` or newlines. Blank drafts the entry from the commits since the last release (see [changelog-entry](#changelog-entry))
+- `version-file`: File holding the version. Default: the single `lib/*/version.rb`, else `package.json`
+- `publish-gem`: Publish to RubyGems. Default: `false`
+- `publish-npm`: Publish to npm. Default: `false`
 
-      - uses: RoleModel/actions/bump-version@v3
-        id: bump
-        with:
-          bump: ${{ inputs.bump }}
+### Secrets
 
-      - uses: RoleModel/actions/bump-version@v3
-        with:
-          bump: ${{ steps.bump.outputs.version }}
-          version-file: package.json
+- `app-private-key`*: Private key of the GitHub App
 
-      - run: bundle install
+### Trusted publishers
 
-      - uses: RoleModel/actions/push-version-tag@v3
-        with:
-          version: ${{ steps.bump.outputs.version }}
-          git-user-name: ${{ steps.app-token.outputs.app-slug }}[bot]
-          git-user-email: ${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com
+Neither registry checks its trusted publisher configuration when you save it, so a mistake shows up as a failed publish job. Fix the configuration and re-run that job; the tag and GitHub release are already in place.
+
+- **RubyGems**: repository = the gem's repository, workflow filename = `release.yml`, **Workflow Repository Owner** = `RoleModel`, **Workflow Repository Name** = `actions`. RubyGems checks the reusable workflow that actually publishes.
+- **npm**: repository = the package's repository, workflow filename = **the calling workflow's file** in that repository. npm checks the caller. The job installs Node 24, since trusted publishing needs npm 11.5.1 or later.
+
+## bump-version, changelog-entry & push-version-tag
+
+The composite actions behind the release workflow, for a repository that needs its own steps in the version commit (the release workflow covers lockfiles and `package.json`). `bump-version` rewrites the version in a file and outputs it. `changelog-entry` records the release in the changelog. `push-version-tag` commits every tracked change as that version, tags it, and pushes the commit and tag atomically, so a rejected branch push never leaves a published tag behind. Anything else that belongs in the version commit (another app's lockfile, generated docs) goes in steps between them.
+
+None of them checks out the code or picks a token: the push uses whatever credentials `actions/checkout` persisted. Pushes made with the default `GITHUB_TOKEN` do not trigger other workflows (e.g. one listening for `v*` tags), so use a GitHub App token or deploy key when something downstream should run.
+
+### bump-version
+
+Bumps a Ruby `VERSION = "x.y.z"` constant or a `package.json` `"version"`, keeping the file's quote style. A gem with a `package.json` beside it gets both bumped, so the gem and its npm package release under one version. A `major`, `minor` or `patch` bump only applies to a plain `MAJOR.MINOR.PATCH` version. From a prerelease such as `2.0.0.beta2`, pass the version you want instead.
+
+Inputs:
+- `bump`*: `major`, `minor`, `patch`, or an explicit version (e.g. `2.0.0.rc1`)
+- `version-file`: File holding the version. Default: the single `lib/*/version.rb`, else `package.json`
+
+Outputs: `version`, `previous-version`
+
+### changelog-entry
+
+Adds `## [v1.5.0] Oct 9, 2026` and its bullets above the newest entry, plus a `[v1.5.0]: <release URL>` link if the changelog keeps reference links. Without a description, it drafts the bullets from the subjects of the commits since the previous release, folding bot commits (Dependabot) into one "Update dependencies" line. With no history to draft from, it writes a placeholder bullet to fill in later, so a release never goes unrecorded.
+
+Inputs:
+- `version`*: The version being released
+- `description`: Bullets, separated by `$>` or newlines. Default: drafted from commits
+- `previous-version`: The version released before this one, whose tag starts the drafted commits. Check out with `fetch-depth: 0` so the history is there
+- `changelog-file`: Default: `CHANGELOG.md`
+- `tag-prefix`: Default: `v`
+
+### push-version-tag
+
+Inputs:
+- `version`*: The version being released
+- `tag-prefix`: Default: `v`
+- `branch`: Branch to push the version commit to. Default: `${{ github.ref_name }}`
+- `git-user-name` / `git-user-email`: Commit and tag author. Default: `github-actions[bot]`
+
+Example (an extra lockfile in the version commit):
+
+```yaml
+steps:
+  # ... app token, checkout with fetch-depth: 0, setup-ruby
+
+  - uses: RoleModel/actions/bump-version@v3
+    id: bump
+    with:
+      bump: ${{ inputs.bump }}
+
+  - run: bundle install && (cd example_app && bundle lock)
+
+  - uses: RoleModel/actions/changelog-entry@v3
+    with:
+      version: ${{ steps.bump.outputs.version }}
+      previous-version: ${{ steps.bump.outputs.previous-version }}
+      description: ${{ inputs.changelog }}
+
+  - uses: RoleModel/actions/push-version-tag@v3
+    with:
+      version: ${{ steps.bump.outputs.version }}
+      git-user-name: ${{ steps.app-token.outputs.app-slug }}[bot]
+      git-user-email: ${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com
 ```
 
 ## Rails CI (reusable workflow)

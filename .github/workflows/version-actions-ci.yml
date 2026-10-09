@@ -6,12 +6,16 @@ on:
       - main
     paths:
       - bump-version/**
+      - changelog-entry/**
       - push-version-tag/**
+      - .github/workflows/release.yml
       - .github/workflows/version-actions-ci.yml
   pull_request:
     paths:
       - bump-version/**
+      - changelog-entry/**
       - push-version-tag/**
+      - .github/workflows/release.yml
       - .github/workflows/version-actions-ci.yml
 
 jobs:
@@ -24,7 +28,17 @@ jobs:
           fetch-depth: 0 # the scratch remote rejects pushes from a shallow clone
 
       - name: Run tests
-        run: ruby bump-version/test/bump_version_test.rb
+        run: |
+          gem install thor --user-install --conservative --no-document --silent
+          ruby bump-version/test/version_bumper_test.rb
+          ruby changelog-entry/test/changelog_entry_test.rb
+
+      - name: Lint workflows
+        run: |
+          bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) latest "$RUNNER_TEMP"
+          # actionlint's metadata predates create-github-app-token@v3, which takes client-id in place of app-id.
+          "$RUNNER_TEMP/actionlint" -color -ignore 'missing input "app-id"' -ignore 'input "client-id" is not defined' \
+            .github/workflows/release.yml .github/workflows/version-actions-ci.yml
 
       - name: Stage a fixture gem against a scratch remote
         run: |
@@ -32,13 +46,19 @@ jobs:
           git remote set-url origin "$RUNNER_TEMP/origin.git"
           mkdir -p lib/fixture
           echo 'VERSION = "1.4.2"' > lib/fixture/version.rb
-          git add lib/fixture
+          printf '# Changelog\n' > CHANGELOG.md
+          git add lib/fixture CHANGELOG.md
           git -c user.name=ci -c user.email=ci@example.com commit --message fixture
 
       - uses: ./bump-version
         id: bump
         with:
           bump: minor
+
+      - uses: ./changelog-entry
+        with:
+          version: ${{ steps.bump.outputs.version }}
+          description: Fixture release $> Second bullet
 
       - uses: ./push-version-tag
         with:
@@ -48,4 +68,6 @@ jobs:
       - name: Verify the remote received the version commit and tag
         run: |
           test "$(git -C "$RUNNER_TEMP/origin.git" show release-check:lib/fixture/version.rb)" = 'VERSION = "1.5.0"'
+          git -C "$RUNNER_TEMP/origin.git" show release-check:CHANGELOG.md | grep -qx '## \[v1.5.0\] .*'
+          git -C "$RUNNER_TEMP/origin.git" show release-check:CHANGELOG.md | grep -qx -- '- Second bullet'
           test "$(git -C "$RUNNER_TEMP/origin.git" rev-parse v1.5.0^{commit})" = "$(git -C "$RUNNER_TEMP/origin.git" rev-parse release-check)"
