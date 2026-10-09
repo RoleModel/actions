@@ -2,15 +2,13 @@ name: release-ci
 
 # -- DO NOT USE: RoleModel/actions CI only --
 #
-# Tests this repository's release tooling. Callers never use it; they call release.yml or the actions.
+# Callers never use it; they call release.yml or the actions.
+# Performs the following steps to validate the full process in its native environment.
 #
 #   1. Unit tests for bump-version (VersionBumper) and changelog-entry
 #   2. actionlint on release.yml and this file
 #   3. bump-version -> changelog-entry -> push-version-tag, end to end against a fixture gem, pushing to a
 #      scratch bare remote on the runner, then checks that the remote got the version commit, entry and tag
-#
-# release.yml is linted, not run: it uses the actions at @v3, so its first real run is from a caller after
-# merge.
 
 on:
   push:
