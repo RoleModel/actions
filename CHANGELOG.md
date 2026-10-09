@@ -2,7 +2,7 @@
 
 ## [v3.13.0] Oct 9, 2026
 
-- Run Brakeman in `rails-ci.yml` with `bundle exec brakeman` instead of `reviewdog/action-brakeman`, publishing its JUnit output as a "Brakeman" check via `action-junit-report`. reviewdog's network calls raced the background apt install (needrestart restarts `systemd-resolved`), intermittently failing the job. `brakeman_version` is now just an on/off switch, and the app's Gemfile must include `brakeman`. (#36)
+- Replace `reviewdog/action-brakeman` in `rails-ci.yml` with a `brakeman_command` input (e.g. `bundle exec brakeman`), like `rubocop_command`. The workflow appends output flags, prints the report to the log, and publishes warnings as annotations through `action-junit-report`. Warnings don't fail the job; Brakeman errors do. reviewdog's network calls raced the background apt install (needrestart restarts `systemd-resolved`), intermittently failing the job. `brakeman_version` is deprecated: any value now runs `bundle exec brakeman`. (#36)
 
 ## [v3.12.0] Oct 8, 2026
 

@@ -7,8 +7,12 @@ on:
         description: Space-separated apt packages to install alongside setup (e.g. "libvips")
         type: string
 
+      brakeman_command:
+        description: Brakeman command to run, e.g. "bundle exec brakeman" (omit to skip). Output flags are appended.
+        type: string
+
       brakeman_version:
-        description: Set to any value (e.g. "gemfile") to run the app's bundled Brakeman (omit to skip)
+        description: Deprecated, use brakeman_command. Any value runs "bundle exec brakeman".
         type: string
 
       dependency_audit_command:
@@ -211,8 +215,8 @@ jobs:
         background: true
 
       - name: Brakeman
-        if: ${{ inputs.brakeman_version }}
-        run: bundle exec brakeman --quiet --no-pager --no-exit-on-warn --no-exit-on-error --format junit --output tmp/brakeman.xml
+        if: ${{ inputs.brakeman_command || inputs.brakeman_version }}
+        run: ${{ inputs.brakeman_command || 'bundle exec brakeman' }} --quiet --no-pager --no-exit-on-warn --output tmp/brakeman.junit --output /dev/stdout
         background: true
 
       # Booting the app loads gems (poppler, vips, …) that dlopen the system
@@ -299,11 +303,10 @@ jobs:
 
           - name: Publish Brakeman Results
             uses: mikepenz/action-junit-report@v6
-            if: ${{ always() && inputs.brakeman_version }}
+            if: ${{ always() && (inputs.brakeman_command || inputs.brakeman_version) }}
             with:
-              check_name: Brakeman
-              report_paths: tmp/brakeman.xml
-              detailed_summary: true
+              report_paths: tmp/brakeman.junit
+              annotate_only: true
 
           - name: Analyze Test Runtimes
             uses: RoleModel/actions/test-runtime-analyzer@v1
