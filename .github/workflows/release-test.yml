@@ -1,4 +1,4 @@
-name: release-ci
+name: release-test
 
 # -- DO NOT USE: RoleModel/actions CI only --
 #
@@ -19,14 +19,14 @@ on:
       - changelog-entry/**
       - push-version-tag/**
       - .github/workflows/release.yml
-      - .github/workflows/release-ci.yml
+      - .github/workflows/release-test.yml
   pull_request:
     paths:
       - bump-version/**
       - changelog-entry/**
       - push-version-tag/**
       - .github/workflows/release.yml
-      - .github/workflows/release-ci.yml
+      - .github/workflows/release-test.yml
 
 jobs:
   test:
@@ -48,7 +48,7 @@ jobs:
           bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) latest "$RUNNER_TEMP"
           # actionlint's metadata predates create-github-app-token@v3, which takes client-id in place of app-id.
           "$RUNNER_TEMP/actionlint" -color -ignore 'missing input "app-id"' -ignore 'input "client-id" is not defined' \
-            .github/workflows/release.yml .github/workflows/release-ci.yml
+            .github/workflows/release.yml .github/workflows/release-test.yml
 
       - name: Stage a fixture gem against a scratch remote
         run: |
