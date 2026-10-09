@@ -88,7 +88,8 @@ jobs:
 ### Inputs
 
 - `apt_packages`: Space-separated apt packages to install alongside setup (e.g. "libvips")
-- `brakeman_version`: Brakeman gem version to run via reviewdog (omit to skip, e.g. "8.0.5")
+- `brakeman_command`: Brakeman command to run, e.g. `bundle exec brakeman` (omit to skip). The workflow appends `--quiet --no-pager --no-exit-on-warn --output tmp/brakeman.junit --output /dev/stdout`, so the full report prints to the log and the warnings are published as annotations. Warnings don't fail the job; Brakeman errors (e.g. parse errors) do.
+- `brakeman_version`: Deprecated, use `brakeman_command`. Any value runs `bundle exec brakeman`.
 - `dependency_audit_command`: Dependency audit command to run (omit to skip)
 - `extra_env`: Additional non-secret environment variables, one KEY=VALUE per line (same format as a .env file). Use this for anything the app requires that isn't already covered by an existing input. For real secret values, use the `extra_secrets` secret instead — `secrets.*` can't be referenced here since this is a `with:` input, evaluated before the caller's secrets are in scope.
 - `failure-screenshot-dir`: the directory where your test runner saves screenshots on failure. Default: `tmp/capybara`
@@ -135,7 +136,7 @@ jobs:
       rubocop_command: bundle exec rubocop --format github
       js_lint_command: yarn lint
       dependency_audit_command: bin/bundler-audit
-      brakeman_version: "8.0.5"
+      brakeman_command: bundle exec brakeman
       failure-screenshot-dir: tmp/screenshots
       extra_env: |
         STRIPE_PUBLISHABLE_KEY=pk_test_placeholder

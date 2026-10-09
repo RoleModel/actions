@@ -7,8 +7,12 @@ on:
         description: Space-separated apt packages to install alongside setup (e.g. "libvips")
         type: string
 
+      brakeman_command:
+        description: Brakeman command to run, e.g. "bundle exec brakeman" (omit to skip). Output flags are appended.
+        type: string
+
       brakeman_version:
-        description: Brakeman gem version to run via reviewdog (omit to skip, e.g. "8.0.5")
+        description: Deprecated, use brakeman_command. Any value runs "bundle exec brakeman".
         type: string
 
       dependency_audit_command:
@@ -211,11 +215,8 @@ jobs:
         background: true
 
       - name: Brakeman
-        if: ${{ inputs.brakeman_version }}
-        uses: reviewdog/action-brakeman@v2
-        with:
-          brakeman_version: ${{ inputs.brakeman_version }}
-          reporter: github-pr-check
+        if: ${{ inputs.brakeman_command || inputs.brakeman_version }}
+        run: ${{ inputs.brakeman_command || 'bundle exec brakeman' }} --quiet --no-pager --no-exit-on-warn --output tmp/brakeman.junit --output /dev/stdout
         background: true
 
       # Booting the app loads gems (poppler, vips, …) that dlopen the system
@@ -282,8 +283,8 @@ jobs:
 
       - wait: [save-asset-cache]
 
-      # None of these read each other's output — all four only consume
-      # artifacts already produced by Run Rspec Tests above.
+      # None of these read each other's output — they only consume
+      # artifacts already produced by the steps above.
       - parallel:
           - name: Save Spec Runtime Stats
             if: always()
@@ -299,6 +300,13 @@ jobs:
               check_name: Test Results
               report_paths: tmp/rspec-*.xml
               detailed_summary: true
+
+          - name: Publish Brakeman Results
+            uses: mikepenz/action-junit-report@v6
+            if: ${{ always() && (inputs.brakeman_command || inputs.brakeman_version) }}
+            with:
+              report_paths: tmp/brakeman.junit
+              annotate_only: true
 
           - name: Analyze Test Runtimes
             uses: RoleModel/actions/test-runtime-analyzer@v1
