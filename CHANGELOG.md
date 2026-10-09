@@ -1,5 +1,11 @@
 # RoleModel/actions
 
+## [v3.13.0] Oct 9, 2026
+
+- Run Brakeman in `rails-ci.yml` from the app's own bundle (`bundle exec brakeman --format github`) instead of `reviewdog/action-brakeman`. reviewdog's check-run API call ran during the background apt install and could fail when needrestart restarted `systemd-resolved`, failing the job despite `fail_on_error: false`. The bundled Brakeman needs no network and honors the app's version pin and `config/brakeman.ignore`; warnings show as annotations instead of a separate reviewdog check.
+  - `brakeman_version` stays the on/off switch. If `Gemfile.lock` includes `brakeman`, that version runs regardless of the input. Otherwise an explicit version is `gem install`ed after the apt install finishes, and `gemfile` now fails the job instead of installing the latest Brakeman.
+  - Add `brakeman_fail_on_warnings` (default `false`) to fail the job on Brakeman warnings or errors.
+
 ## [v3.12.0] Oct 8, 2026
 
 - Stop setting `CAPYBARA_DRIVER: js` in `rails-ci.yml`, so specs written for `rack_test` no longer run in a browser. To keep the old behavior, add `CAPYBARA_DRIVER=js` to `extra_env`.
