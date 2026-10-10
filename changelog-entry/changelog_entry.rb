@@ -5,6 +5,7 @@ require 'open3'
 class ChangelogEntry
   PLACEHOLDER = '- _No description yet. Fill this in._'.freeze
   LINK = /^\[[^\]]+\]: /
+  UNRELEASED_HEADING = /^## \[?Unreleased\]?/i
 
   # Bullets typed into the workflow form, separated by `$>` or newlines.
   def self.from_description(description)
@@ -38,19 +39,40 @@ class ChangelogEntry
     changelog = changelog.sub(LINK) { "[#{tag}]: #{url}\n#{_1}" } if source.match?(LINK)
     "#{changelog.rstrip}\n"
   end
+
+  # Replace the Unreleased heading with the new version/date, keeping content unchanged.
+  def replace_unreleased(tag:, date:)
+    changelog = source.sub(UNRELEASED_HEADING) { "## [#{tag}] #{date}" }
+    "#{changelog.rstrip}\n"
+  end
 end
 
 if __FILE__ == $PROGRAM_NAME
+  mode = ENV.fetch('MODE', 'on')
+
+  # Exit early if mode is 'off' - don't touch the changelog
+  exit 0 if mode == 'off'
+
   path = ENV.fetch('CHANGELOG_FILE', 'CHANGELOG.md')
   tag = "#{ENV.fetch('TAG_PREFIX', 'v')}#{ARGV.fetch(0)}"
   previous_tag = "#{ENV.fetch('TAG_PREFIX', 'v')}#{ENV.fetch('PREVIOUS_VERSION', '')}"
 
-  bullets = ChangelogEntry.from_description(ENV.fetch('DESCRIPTION', ''))
-  bullets = ChangelogEntry.from_commits_since(previous_tag) if bullets.empty?
+  changelog_content = File.read(path)
 
-  url = "#{ENV.fetch('GITHUB_SERVER_URL', 'https://github.com')}/#{ENV.fetch('GITHUB_REPOSITORY', '')}/releases/tag/#{tag}"
-  changelog = ChangelogEntry.new(File.read(path)).with_entry(tag:, bullets:, date: Time.now.utc.strftime('%b %-d, %Y'), url:)
-  File.write(path, changelog)
+  if mode == 'unreleased'
+    # Replace Unreleased heading with version/date, keep content
+    changelog = ChangelogEntry.new(changelog_content).replace_unreleased(tag:, date: Time.now.utc.strftime('%b %-d, %Y'))
+    File.write(path, changelog)
+    puts "Updated Unreleased heading to #{tag} in #{path}"
+  else
+    # mode == 'on' - add full entry
+    bullets = ChangelogEntry.from_description(ENV.fetch('DESCRIPTION', ''))
+    bullets = ChangelogEntry.from_commits_since(previous_tag) if bullets.empty?
 
-  puts "Added #{tag} to #{path}:", bullets
+    url = "#{ENV.fetch('GITHUB_SERVER_URL', 'https://github.com')}/#{ENV.fetch('GITHUB_REPOSITORY', '')}/releases/tag/#{tag}"
+    changelog = ChangelogEntry.new(changelog_content).with_entry(tag:, bullets:, date: Time.now.utc.strftime('%b %-d, %Y'), url:)
+    File.write(path, changelog)
+
+    puts "Added #{tag} to #{path}:", bullets
+  end
 end
