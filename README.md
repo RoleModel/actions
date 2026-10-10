@@ -111,8 +111,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: ${{ github.workflow }}
-
+  group: ${{ github.workflow }}-${{ github.event_name == 'workflow_dispatch' && 'bump' || github.ref }}
 jobs:
   release:
     uses: RoleModel/actions/.github/workflows/release.yml@v3

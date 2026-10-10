@@ -62,7 +62,7 @@ class VersionBumper < Thor::Group
   end
 
   def current_version_string
-    @current_version_string ||= file_paths.map { File.read(it)[VERSION_PATTERN, :version] }.compact.first or
+    @current_version_string ||= file_paths.map { |path| File.read(path)[VERSION_PATTERN, :version] }.compact.first or
       raise Thor::Error, "No VERSION constant or \"version\" key in #{file_paths}"
   end
 

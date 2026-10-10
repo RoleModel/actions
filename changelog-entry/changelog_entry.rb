@@ -18,7 +18,7 @@ class ChangelogEntry
     return [PLACEHOLDER] unless status.success?
 
     commits = log.lines(chomp: true).map { _1.split("\t", 2) }
-    bots, people = commits.partition { |author, _| author.end_with?('[bot]') }
+    bots, people = commits.partition { |author, _| author.casecmp?('dependabot[bot]') }
     bullets = people.map { |_, subject| "- #{subject}" }
     bullets << '- Update dependencies' if bots.any?
     bullets.empty? ? [PLACEHOLDER] : bullets
