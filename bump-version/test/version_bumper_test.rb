@@ -47,10 +47,11 @@ class VersionBumperTest < Minitest::Test
   end
 
   def test_bumps_package_json_alongside_the_gem
-    write 'package.json', %({\n  "name": "@rolemodel/lazy-chain",\n  "version": "1.4.2",\n  "dependencies": { "@hotwired/turbo": "8.0.0" }\n}\n)
+    write 'package.json', %({\n  "name": "@rolemodel/lazy-chain",\n  "version": "1.4.2",\n  "scripts": { "version": "auto-changelog -p" },\n  "dependencies": { "@hotwired/turbo": "8.0.0" }\n}\n)
 
     bump
     assert_includes read('package.json'), %("version": "1.5.0")
+    assert_includes read('package.json'), %("version": "auto-changelog -p")
     assert_includes read('package.json'), %("@hotwired/turbo": "8.0.0")
   end
 

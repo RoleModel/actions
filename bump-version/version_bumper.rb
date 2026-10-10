@@ -3,8 +3,6 @@
 require 'thor'
 
 class VersionBumper < Thor::Group
-  include Thor::Actions
-
   VERSION_PATTERN = /(?<assignment>VERSION\s*=\s*|"version"\s*:\s*)(?<quote>["'])(?<version>[^"']+)\k<quote>/
 
   argument :file_path_glob, type: :string, optional: true, default: 'lib/*/version.rb',
@@ -31,7 +29,7 @@ class VersionBumper < Thor::Group
 
   def bump_version
     file_paths.each do |path|
-      gsub_file path, VERSION_PATTERN, "\\k<assignment>\\k<quote>#{new_version_string}\\k<quote>", verbose: false
+      File.write path, File.read(path).sub(VERSION_PATTERN, "\\k<assignment>\\k<quote>#{new_version_string}\\k<quote>")
     end
   end
 
