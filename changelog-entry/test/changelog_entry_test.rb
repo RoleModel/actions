@@ -51,6 +51,22 @@ class ChangelogEntryTest < Minitest::Test
     assert_equal "# Changelog\n\n## [v0.1.0] Oct 9, 2026\n\n- First\n", changelog
   end
 
+  def test_replaces_bracketed_unreleased_heading_and_preserves_section_content
+    source = "# Changelog\n\n## [Unreleased]\n\n- Work in progress\n\n## [v1.0.0] Jan 1, 2026\n\n- First\n"
+
+    changelog = ChangelogEntry.new(source).replace_unreleased(tag: 'v1.1.0', date: 'Oct 10, 2026')
+
+    assert_equal "# Changelog\n\n## [v1.1.0] Oct 10, 2026\n\n- Work in progress\n\n## [v1.0.0] Jan 1, 2026\n\n- First\n", changelog
+  end
+
+  def test_replaces_plain_unreleased_heading_and_preserves_section_content
+    source = "# Changelog\n\n## Unreleased\n\n- Work in progress\n"
+
+    changelog = ChangelogEntry.new(source).replace_unreleased(tag: 'v1.1.0', date: 'Oct 10, 2026')
+
+    assert_equal "# Changelog\n\n## [v1.1.0] Oct 10, 2026\n\n- Work in progress\n", changelog
+  end
+
   def test_drafts_from_commits_since_the_previous_tag_folding_in_bot_commits
     in_repo do
       commit 'Before the release'
