@@ -17,6 +17,13 @@ on:
         type: string
         default: ''
 
+      changelog-mode:
+        description: >
+          Changelog behavior: 'off' leaves the file untouched, 'on' adds an entry with bullets,
+          and 'unreleased' replaces the Unreleased heading while keeping its content.
+        type: string
+        default: 'on'
+
       version-file:
         description: File holding the version. Default the single `lib/*/version.rb`, else `package.json`.
         type: string
@@ -82,9 +89,10 @@ jobs:
         run: npm install --package-lock-only --ignore-scripts
 
       - uses: RoleModel/actions/changelog-entry@v3
-        if: hashFiles('CHANGELOG.md') != ''
+        if: hashFiles('CHANGELOG.md') != '' && inputs.changelog-mode != 'off'
         with:
           version: ${{ steps.bump.outputs.version }}
+          mode: ${{ inputs.changelog-mode }}
           previous-version: ${{ steps.bump.outputs.previous-version }}
           description: ${{ inputs.changelog }}
 
