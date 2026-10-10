@@ -1,0 +1,86 @@
+name: release-test
+
+# -- DO NOT USE: RoleModel/actions CI only --
+#
+# Callers never use it; they call release.yml or the actions.
+# Performs the following steps to validate the full process in its native environment.
+#
+#   1. Unit tests for bump-version (VersionBumper) and changelog-entry
+#   2. actionlint on release.yml and this file
+#   3. bump-version -> changelog-entry -> push-version-tag, end to end against a fixture gem, pushing to a
+#      scratch bare remote on the runner, then checks that the remote got the version commit, entry and tag
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - bump-version/**
+      - changelog-entry/**
+      - push-version-tag/**
+      - .github/workflows/release.yml
+      - .github/workflows/release-test.yml
+  pull_request:
+    paths:
+      - bump-version/**
+      - changelog-entry/**
+      - push-version-tag/**
+      - .github/workflows/release.yml
+      - .github/workflows/release-test.yml
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the scratch remote rejects pushes from a shallow clone
+
+      - name: Run tests
+        run: |
+          gem install thor --user-install --conservative --no-document --silent
+          ruby bump-version/test/version_bumper_test.rb
+          ruby changelog-entry/test/changelog_entry_test.rb
+
+      - name: Lint workflows
+        run: |
+          curl -sSfL -o "$RUNNER_TEMP/actionlint.tar.gz" \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  $RUNNER_TEMP/actionlint.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP" actionlint
+          # actionlint's metadata predates create-github-app-token@v3, which takes client-id in place of app-id.
+          "$RUNNER_TEMP/actionlint" -color -ignore 'missing input "app-id"' -ignore 'input "client-id" is not defined' \
+            .github/workflows/release.yml .github/workflows/release-test.yml
+
+      - name: Stage a fixture gem against a scratch remote
+        run: |
+          git init --bare "$RUNNER_TEMP/origin.git"
+          git remote set-url origin "$RUNNER_TEMP/origin.git"
+          mkdir -p lib/fixture
+          echo 'VERSION = "1.4.2"' > lib/fixture/version.rb
+          printf '# Changelog\n' > CHANGELOG.md
+          git add lib/fixture CHANGELOG.md
+          git -c user.name=ci -c user.email=ci@example.com commit --message fixture
+
+      - uses: ./bump-version
+        id: bump
+        with:
+          bump: minor
+
+      - uses: ./changelog-entry
+        with:
+          version: ${{ steps.bump.outputs.version }}
+          description: Fixture release $> Second bullet
+
+      - uses: ./push-version-tag
+        with:
+          version: ${{ steps.bump.outputs.version }}
+          branch: release-check
+
+      - name: Verify the remote received the version commit and tag
+        run: |
+          test "$(git -C "$RUNNER_TEMP/origin.git" show release-check:lib/fixture/version.rb)" = 'VERSION = "1.5.0"'
+          git -C "$RUNNER_TEMP/origin.git" show release-check:CHANGELOG.md | grep -qx '## \[v1.5.0\] .*'
+          git -C "$RUNNER_TEMP/origin.git" show release-check:CHANGELOG.md | grep -qx -- '- Second bullet'
+          test "$(git -C "$RUNNER_TEMP/origin.git" rev-parse "v1.5.0^{commit}")" = "$(git -C "$RUNNER_TEMP/origin.git" rev-parse release-check)"

@@ -1,0 +1,43 @@
+name: Push Version Tag
+description: Commits tracked changes as the new version, tags it, and pushes both atomically.
+inputs:
+  version:
+    description: The version being released (e.g. the `version` output of bump-version).
+    required: true
+
+  tag-prefix:
+    description: Prefix for the tag name and commit message.
+    required: false
+    default: v
+
+  branch:
+    description: Branch to push the version commit to.
+    required: false
+    default: ${{ github.ref_name }}
+
+  git-user-name:
+    description: Author name for the version commit and tag.
+    required: false
+    default: github-actions[bot]
+
+  git-user-email:
+    description: Author email for the version commit and tag.
+    required: false
+    default: 41898282+github-actions[bot]@users.noreply.github.com
+
+runs:
+  using: composite
+  steps:
+    - name: Commit, tag, and push
+      shell: bash
+      env:
+        TAG: ${{ inputs.tag-prefix }}${{ inputs.version }}
+        BRANCH: ${{ inputs.branch }}
+        GIT_AUTHOR_NAME: ${{ inputs.git-user-name }}
+        GIT_AUTHOR_EMAIL: ${{ inputs.git-user-email }}
+        GIT_COMMITTER_NAME: ${{ inputs.git-user-name }}
+        GIT_COMMITTER_EMAIL: ${{ inputs.git-user-email }}
+      run: |
+        git commit --all --message "$TAG"
+        git tag --annotate --message "$TAG" "$TAG"
+        git push --atomic origin "HEAD:refs/heads/$BRANCH" "refs/tags/$TAG"
