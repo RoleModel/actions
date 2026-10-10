@@ -7,8 +7,8 @@ name: Release
 on:
   workflow_call:
     inputs:
-      bump:
-        description: One of `major`, `minor`, `patch`, or an explicit version (e.g. `2.0.0.rc1`).
+      bump-type:
+        description: One of `major`, `minor`, or `patch`.
         type: string
         default: minor
 
@@ -77,7 +77,7 @@ jobs:
       - uses: RoleModel/actions/bump-version@v3
         id: bump
         with:
-          bump: ${{ inputs.bump }}
+          bump: ${{ inputs.bump-type }}
           version-file: ${{ inputs.version-file }}
 
       - name: Update Gemfile.lock
