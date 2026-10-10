@@ -7,8 +7,8 @@ class VersionBumper < Thor::Group
 
   VERSION_PATTERN = /(?<assignment>VERSION\s*=\s*|"version"\s*:\s*)(?<quote>["'])(?<version>[^"']+)\k<quote>/
 
-  argument :version_file, type: :string, optional: true,
-                          desc: 'File holding the version. Default: the single lib/*/version.rb, else package.json'
+  argument :file_path_glob, type: :string, optional: true, default: 'lib/*/version.rb',
+                            desc: 'File holding the official version constant. (package.json supported automatically)'
 
   class_exclusive do
     class_option :patch, type: :boolean, lazy_default: false, desc: 'Bump patch version instead of minor version'
@@ -17,11 +17,11 @@ class VersionBumper < Thor::Group
     class_option :version, type: :string, desc: 'Bump to a specific version (overrides all other flags)'
   end
 
-  def verify_versions
+  def validate_explicit_version
     if options.version?
       return if options[:version].match?(/\A\d/) && Gem::Version.correct?(options[:version])
 
-      raise Thor::Error, "#{options[:version].inspect} isn't a version"
+      raise Thor::Error, "#{options[:version].inspect} isn't an acceptable version format"
     end
 
     return if current_version_string.match?(/\A\d+\.\d+\.\d+\z/)
@@ -30,16 +30,13 @@ class VersionBumper < Thor::Group
   end
 
   def bump_version
-    rewrite_version version_path
-  end
-
-  # A gem that also ships an npm package releases both under one version.
-  def bump_package_version
-    rewrite_version 'package.json' if version_path != 'package.json' && File.exist?('package.json')
+    file_paths.each do |path|
+      gsub_file path, VERSION_PATTERN, "\\k<assignment>\\k<quote>#{new_version_string}\\k<quote>", verbose: false
+    end
   end
 
   def report_new_version
-    say "Bumped #{version_path} from #{current_version_string} to #{set_color(new_version_string, :yellow)}", :green
+    say "Bumped version from #{current_version_string} to #{set_color(new_version_string, :yellow)}", :green
     return unless ENV['GITHUB_OUTPUT']
 
     File.write(ENV['GITHUB_OUTPUT'], "version=#{new_version_string}\nprevious-version=#{current_version_string}\n", mode: 'a')
@@ -47,45 +44,36 @@ class VersionBumper < Thor::Group
 
   private
 
-  def rewrite_version(path)
-    gsub_file path, VERSION_PATTERN, "\\k<assignment>\\k<quote>#{new_version_string}\\k<quote>", verbose: false
-  end
-
   def new_version_string
     @new_version_string ||= begin
       return options[:version] if options.version?
 
       nv = current_version.bump
+      # we now have a two segment version, unless this was a patch
       nv = nv.bump if options.major?
+      # fill in missing segments to ensure a three-segment version
       nv.segments.fill(0, nv.segments.size, 3 - nv.segments.size).join('.')
     end
   end
 
+  # Gem::Version#bump always increments the second to last segment only, so we need to append a segment to do a patch bump correctly
   def current_version
     Gem::Version.new(options.patch? ? "#{current_version_string}.0" : current_version_string)
   end
 
   def current_version_string
-    @current_version_string ||= File.read(version_path)[VERSION_PATTERN, :version] or
-      raise Thor::Error, "No VERSION constant or \"version\" key in #{version_path}"
+    @current_version_string ||= file_paths.map { File.read(it)[VERSION_PATTERN, :version] }.compact.first or
+      raise Thor::Error, "No VERSION constant or \"version\" key in #{file_paths}"
   end
 
-  def version_path
-    @version_path ||= version_file.to_s.empty? ? detect_version_file : version_file
-  end
-
-  def detect_version_file
-    candidates = Dir['lib/*/version.rb']
-    return candidates.first if candidates.one?
-    return 'package.json' if candidates.empty? && File.exist?('package.json')
-
-    raise Thor::Error, "Found #{candidates.size} lib/*/version.rb files; pass the version file"
+  def file_paths
+    @file_paths ||= Dir.glob([file_path_glob, 'package.json'])
   end
 
   class << self
     def exit_on_failure? = true
-    def banner = 'version_bumper.rb [VERSION_FILE] [--patch|--major|--version VERSION]'
-    def desc = 'Bump the version in a Ruby VERSION constant or package.json'
+    def banner = 'version_bumper.rb [VERSION_FILE_GLOB] [--patch|--major|--version VERSION]'
+    def desc = 'Bump the VERSION constant and/or the version key in package.json'
   end
 end
 

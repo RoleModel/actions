@@ -62,29 +62,30 @@ class VersionBumperTest < Minitest::Test
   end
 
   def test_takes_an_explicit_version_file
-    write 'lib/other/version.rb', 'VERSION = "0.1.0"'
+    FileUtils.rm_rf('lib')
+    write 'config/version.rb', 'VERSION = "0.1.0"'
 
-    assert_raises(Thor::Error) { bump }
-    assert_equal '0.2.0', bump('lib/other/version.rb')
+    assert_equal '0.2.0', bump(file: 'config/version.rb')
+    assert_equal 'VERSION = "0.2.0"', read('config/version.rb')
   end
 
   def test_writes_github_outputs
-    output = File.join(@dir, 'github_output')
-    ENV['GITHUB_OUTPUT'] = output
-
     bump('--patch')
-    assert_equal "version=1.4.3\nprevious-version=1.4.2\n", File.read(output)
-  ensure
-    ENV.delete('GITHUB_OUTPUT')
+    assert_equal "version=1.4.3\nprevious-version=1.4.2\n", read(github_output)
   end
 
   private
 
-  def bump(*args)
-    files, flags = args.partition { |arg| arg.end_with?('.rb', '.json') }
-    capture_io { VersionBumper.new(files, flags).invoke_all }
-    read(files.first || Dir['lib/*/version.rb'].first || 'package.json')[VersionBumper::VERSION_PATTERN, :version]
+  def bump(*flags, file: nil)
+    File.write(github_output, '')
+    previous_output, ENV['GITHUB_OUTPUT'] = ENV['GITHUB_OUTPUT'], github_output
+    capture_io { VersionBumper.new([file].compact, flags).invoke_all }
+    read(github_output)[/^version=(.+)$/, 1]
+  ensure
+    ENV['GITHUB_OUTPUT'] = previous_output
   end
+
+  def github_output = File.join(@dir, 'github_output')
 
   def write(path, content)
     FileUtils.mkdir_p(File.dirname(path))

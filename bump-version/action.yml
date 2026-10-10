@@ -11,7 +11,7 @@ inputs:
   version-file:
     description: >
       File holding the version, either as a `VERSION = "x.y.z"` constant or a `"version": "x.y.z"` key.
-      Defaults to the single `lib/*/version.rb` in the repository, else `package.json`.
+      Defaults to `lib/*/version.rb`. A `package.json` is always bumped alongside it.
     required: false
     default: ''
 
