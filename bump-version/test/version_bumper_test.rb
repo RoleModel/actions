@@ -46,6 +46,13 @@ class VersionBumperTest < Minitest::Test
     assert_equal %(VERSION = "1.5.0".freeze # comment), read('lib/lazy_chain/version.rb')
   end
 
+  def test_ignores_constants_that_only_end_in_version
+    write 'lib/lazy_chain/version.rb', %(MIN_RUBY_VERSION = "3.2.0"\nVERSION = "1.4.2"\n)
+
+    assert_equal '1.5.0', bump
+    assert_equal %(MIN_RUBY_VERSION = "3.2.0"\nVERSION = "1.5.0"\n), read('lib/lazy_chain/version.rb')
+  end
+
   def test_bumps_package_json_alongside_the_gem
     write 'package.json', %({\n  "name": "@rolemodel/lazy-chain",\n  "version": "1.4.2",\n  "scripts": { "version": "auto-changelog -p" },\n  "dependencies": { "@hotwired/turbo": "8.0.0" }\n}\n)
 

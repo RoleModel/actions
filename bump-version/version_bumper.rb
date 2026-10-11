@@ -3,7 +3,7 @@
 require 'thor'
 
 class VersionBumper < Thor::Group
-  VERSION_PATTERN = /(?<assignment>VERSION\s*=\s*|"version"\s*:\s*)(?<quote>["'])(?<version>[^"']+)\k<quote>/
+  VERSION_PATTERN = /(?<assignment>\bVERSION\s*=\s*|"version"\s*:\s*)(?<quote>["'])(?<version>[^"']+)\k<quote>/
 
   argument :file_path_glob, type: :string, optional: true, default: 'lib/*/version.rb',
                             desc: 'File holding the official version constant. (package.json supported automatically)'
