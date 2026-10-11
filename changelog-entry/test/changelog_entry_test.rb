@@ -51,20 +51,64 @@ class ChangelogEntryTest < Minitest::Test
     assert_equal "# Changelog\n\n## [v0.1.0] Oct 9, 2026\n\n- First\n", changelog
   end
 
-  def test_replaces_bracketed_unreleased_heading_and_preserves_section_content
-    source = "# Changelog\n\n## [Unreleased]\n\n- Work in progress\n\n## [v1.0.0] Jan 1, 2026\n\n- First\n"
+  def test_turns_the_unreleased_section_into_the_entry_with_its_link
+    source = <<~MD
+      # Changelog
 
-    changelog = ChangelogEntry.new(source).replace_unreleased(tag: 'v1.1.0', date: 'Oct 10, 2026')
+      ## [Unreleased]
 
-    assert_equal "# Changelog\n\n## [v1.1.0] Oct 10, 2026\n\n- Work in progress\n\n## [v1.0.0] Jan 1, 2026\n\n- First\n", changelog
+      ### Added
+
+      - Work in progress
+
+      ## [v1.0.0] Jan 1, 2026
+
+      - First
+
+      [Unreleased]: https://example.com/compare/v1.0.0...HEAD
+      [v1.0.0]: https://example.com/v1.0.0
+    MD
+    changelog = ChangelogEntry.new(source)
+    bullets = changelog.bullets(description: 'Hover trigger', previous_tag: 'v1.0.0')
+
+    assert_equal <<~MD, changelog.with_entry(tag: 'v1.1.0', bullets:, date: 'Oct 10, 2026', url: 'https://example.com/v1.1.0')
+      # Changelog
+
+      ## [v1.1.0] Oct 10, 2026
+
+      - Hover trigger
+      ### Added
+
+      - Work in progress
+
+      ## [v1.0.0] Jan 1, 2026
+
+      - First
+
+      [v1.1.0]: https://example.com/v1.1.0
+      [Unreleased]: https://example.com/compare/v1.0.0...HEAD
+      [v1.0.0]: https://example.com/v1.0.0
+    MD
   end
 
-  def test_replaces_plain_unreleased_heading_and_preserves_section_content
-    source = "# Changelog\n\n## Unreleased\n\n- Work in progress\n"
+  def test_turns_a_trailing_unreleased_section_into_the_entry
+    changelog = ChangelogEntry.new("# Changelog\n\n## Unreleased\n\n- Work in progress\n")
 
-    changelog = ChangelogEntry.new(source).replace_unreleased(tag: 'v1.1.0', date: 'Oct 10, 2026')
+    assert_equal "# Changelog\n\n## [v1.1.0] Oct 10, 2026\n\n- Work in progress\n",
+                 changelog.with_entry(tag: 'v1.1.0', bullets: changelog.bullets(description: '', previous_tag: 'v1.0.0'),
+                                      date: 'Oct 10, 2026', url: 'x')
+  end
 
-    assert_equal "# Changelog\n\n## [v1.1.0] Oct 10, 2026\n\n- Work in progress\n", changelog
+  def test_drafts_bullets_for_an_empty_unreleased_section
+    in_repo do
+      commit 'Before the release'
+      git 'tag', 'v1.0.0'
+      commit 'Add a hover trigger (#12)'
+
+      assert_equal ['- Add a hover trigger (#12)'],
+                   ChangelogEntry.new("# Changelog\n\n## [Unreleased]\n\n## [v1.0.0] Jan 1, 2026\n")
+                                 .bullets(description: '', previous_tag: 'v1.0.0')
+    end
   end
 
   def test_drafts_from_commits_since_the_previous_tag_folding_in_bot_commits

@@ -1,24 +1,17 @@
 name: Changelog Entry
 description: >
-  Adds the newest release to the top of a changelog, or replaces its Unreleased heading.
-  Without a description it drafts one from the commits since the previous release, or leaves
-  a placeholder, so no release goes unrecorded. Does not commit; pair with push-version-tag.
+  Records the newest release in a changelog, in place of its Unreleased section if it has one, else at
+  the top. Without a description or Unreleased notes it drafts one from the commits since the previous
+  release, or leaves a placeholder, so no release goes unrecorded. Does not commit; pair with push-version-tag.
 inputs:
   version:
     description: The version being released (e.g. the `version` output of bump-version).
     required: true
 
-  mode:
-    description: >
-      Changelog behavior: 'off' leaves the file untouched, 'on' adds a version entry and its bullets,
-      and 'unreleased' replaces the Unreleased heading with the version and date while keeping its content.
-    required: false
-    default: 'on'
-
   description:
     description: >
-      Bullets for the entry, separated by `$>` or newlines. Leave blank to draft them from the commits since
-      `previous-version`.
+      Bullets for the entry, separated by `$>` or newlines, placed above any notes under Unreleased. Leave
+      blank to keep just those notes, or with none, to draft them from the commits since `previous-version`.
     required: false
     default: ''
 
@@ -31,7 +24,7 @@ inputs:
     default: ''
 
   changelog-file:
-    description: The changelog to update.
+    description: The changelog to update. Skipped if there's no such file.
     required: false
     default: CHANGELOG.md
 
@@ -47,7 +40,6 @@ runs:
       shell: bash
       env:
         VERSION: ${{ inputs.version }}
-        MODE: ${{ inputs.mode }}
         DESCRIPTION: ${{ inputs.description }}
         PREVIOUS_VERSION: ${{ inputs.previous-version }}
         CHANGELOG_FILE: ${{ inputs.changelog-file }}

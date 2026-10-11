@@ -85,7 +85,7 @@ jobs:
 
 `.github/workflows/release.yml` is a `workflow_call` reusable workflow that cuts a release end to end: version bump, changelog entry, version commit and tag, GitHub release, and publishing to RubyGems and/or npm with trusted publishing. Call it from a workflow with two triggers:
 
-- **`workflow_dispatch`** (the Actions tab) runs the `bump` job. It bumps the version, updates `Gemfile.lock` and `package-lock.json` if present, adds a `CHANGELOG.md` entry if there's a changelog, then commits, tags and pushes with a GitHub App token.
+- **`workflow_dispatch`** (the Actions tab) runs the `bump` job. It bumps the version, updates `Gemfile.lock` and `package-lock.json` if present, adds a changelog entry if there's a changelog, then commits, tags and pushes with a GitHub App token.
 - **A `v*` tag push** runs the `release` and publish jobs. That tag push comes from the `bump` job, or from someone pushing a tag by hand. A push made with the default `GITHUB_TOKEN` wouldn't trigger the workflow again, which is why the `bump` job uses an App token.
 
 ```yaml
@@ -126,7 +126,7 @@ jobs:
 
 - `bump-type`: `major`, `minor`, `patch`, or an explicit version (e.g. `2.0.0.rc1`). Default: `minor`
 - `changelog`: Bullets for the changelog entry, separated by `$>` or newlines. Blank drafts the entry from the commits since the last release (see [changelog-entry](#changelog-entry))
-- `changelog-mode`: `off` leaves the changelog untouched, `on` adds an entry, `unreleased` turns the Unreleased heading into the version's. Default: `on`
+- `changelog-file`: The changelog to update. Blank, or a file that doesn't exist, skips it. Default: `CHANGELOG.md`
 - `app-client-id`: Client ID of the GitHub App that pushes the version commit and tag. Default: `vars.RMS_VERSION_MANAGER_CLIENT_ID`
 - `version-file`: File holding the version. Default: the single `lib/*/version.rb`, else `package.json`
 - `publish-gem`: Publish to RubyGems. Default: `false`
@@ -163,14 +163,13 @@ Outputs: `version`, `previous-version`
 
 ### changelog-entry
 
-Adds `## [v1.5.0] Oct 9, 2026` and its bullets above the newest entry, plus a `[v1.5.0]: <release URL>` link if the changelog keeps reference links. Without a description, it drafts the bullets from the subjects of the commits since the previous release, folding bot commits (Dependabot) into one "Update dependencies" line. With no history to draft from, it writes a placeholder bullet to fill in later, so a release never goes unrecorded.
+Adds `## [v1.5.0] Oct 9, 2026` and its bullets, plus a `[v1.5.0]: <release URL>` link if the changelog keeps reference links. An `## Unreleased` section becomes the entry, keeping its notes beneath any description bullets; otherwise the entry goes above the newest one. With neither a description nor Unreleased notes, it drafts the bullets from the subjects of the commits since the previous release, folding bot commits (Dependabot) into one "Update dependencies" line. With no history to draft from, it writes a placeholder bullet to fill in later, so a release never goes unrecorded.
 
 Inputs:
 - `version`*: The version being released
-- `mode`: `off`, `on`, or `unreleased` (see the release workflow's `changelog-mode`). Default: `on`
-- `description`: Bullets, separated by `$>` or newlines. Default: drafted from commits
+- `description`: Bullets, separated by `$>` or newlines, placed above any Unreleased notes. Default: just those notes, else drafted from commits
 - `previous-version`: The version released before this one, whose tag starts the drafted commits. Check out with `fetch-depth: 0` so the history is there
-- `changelog-file`: Default: `CHANGELOG.md`
+- `changelog-file`: Skipped if there's no such file. Default: `CHANGELOG.md`
 - `tag-prefix`: Default: `v`
 
 ### push-version-tag
