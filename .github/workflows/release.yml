@@ -13,7 +13,9 @@ on:
         default: minor
 
       changelog:
-        description: Changelog bullets, separated by `$>` or newlines. Blank drafts them from the commits since the last release.
+        description: >
+          Changelog bullets, separated by `$>` or newlines, placed above any Unreleased notes. Blank uses just those
+          notes, or with none, drafts them from the commits since the last release.
         type: string
         default: ''
 

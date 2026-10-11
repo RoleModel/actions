@@ -1,6 +1,6 @@
 # RoleModel/actions
 
-Shared Github Actions
+Shared GitHub Actions
 
 ## test-cleanup
 
@@ -25,7 +25,7 @@ the file level, so when running in parallel, the entire suite can never be quick
 
 Inputs:
 
-- `test-output-path`*: Path to the test output file that hold runtimes
+- `test-output-path`*: Path to the test output file that holds runtimes
 - `top-count`: Number of slowest tests to show. Default: 10
 
 Example:
@@ -95,13 +95,12 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      bump:
-        description: major, minor, patch, or an explicit version
+      bump-type:
         type: choice
         options: [patch, minor, major]
         default: minor
       changelog:
-        description: Changelog entry (separate bullets with $>). Leave blank to draft it from the commits.
+        description: Changelog bullets (separate with $>). Leave blank to use the Unreleased notes or draft them from the commits.
         type: string
   push:
     tags: ['v*']
@@ -116,7 +115,7 @@ jobs:
   release:
     uses: RoleModel/actions/.github/workflows/release.yml@v3
     with:
-      bump-type: ${{ inputs.bump }}
+      bump-type: ${{ inputs.bump-type }}
       changelog: ${{ inputs.changelog }}
       publish-gem: true
     secrets: inherit
@@ -124,11 +123,11 @@ jobs:
 
 ### Inputs
 
-- `bump-type`: `major`, `minor`, `patch`, or an explicit version (e.g. `2.0.0.rc1`). Default: `minor`
-- `changelog`: Bullets for the changelog entry, separated by `$>` or newlines. Blank drafts the entry from the commits since the last release (see [changelog-entry](#changelog-entry))
+- `bump-type`: `major`, `minor`, or `patch`. Default: `minor`
+- `changelog`: Bullets for the changelog entry, separated by `$>` or newlines, placed above any Unreleased notes. Blank uses just those notes, or with none, drafts the entry from the commits since the last release (see [changelog-entry](#changelog-entry))
 - `changelog-file`: The changelog to update. Blank, or a file that doesn't exist, skips it. Default: `CHANGELOG.md`
-- `app-client-id`: Client ID of the GitHub App that pushes the version commit and tag. Default: `vars.RMS_VERSION_MANAGER_CLIENT_ID`
 - `version-file`: File holding the version. Default: the single `lib/*/version.rb`, else `package.json`
+- `app-client-id`: Client ID of the GitHub App that pushes the version commit and tag. Default: `vars.RMS_VERSION_MANAGER_CLIENT_ID`
 - `publish-gem`: Publish to RubyGems. Default: `false`
 - `publish-npm`: Publish to npm. Default: `false`
 
@@ -178,7 +177,7 @@ Inputs:
 - `version`*: The version being released
 - `tag-prefix`: Default: `v`
 - `branch`: Branch to push the version commit to. Default: `${{ github.ref_name }}`
-- `git-user-name` / `git-user-email`: Commit and tag author. Default: `github-actions[bot]`
+- `git-user-name` / `git-user-email`: Commit and tag author. Default: the `github-actions[bot]` user
 
 Example (an extra lockfile in the version commit):
 
@@ -275,7 +274,7 @@ jobs:
 
 This is a combination of multiple composite actions that can be used to run your entire CI flow for a rails app using parallel_tests. Each action allow you to customize the machine, environment variables, and any custom install steps that are needed. It does require you to check out the code yourself, since some install steps might happen after that.
 
-### Inputs, by composit action name
+### Inputs, by composite action name
 
 - `linting-and-non-system-tests`:
   - `linting_step_required`
@@ -391,11 +390,11 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Capture Project Stats
-        uses: RoleModel/actions/project-stats
+        uses: RoleModel/actions/project-stats@v3
 ```
 
 ## Versioning
 
 This is using [anothrNick/github-tag-action](https://github.com/anothrNick/github-tag-action/tree/master) to automatically
-post version tags when a commit is merged to master. Unless you include `#patch` or `#major` in your commit message,
+post version tags when a commit is merged to main. Unless you include `#patch` or `#major` in your commit message,
 it will automatically create a new tag a minor version higher. `#none` will skip tagging altogether.
