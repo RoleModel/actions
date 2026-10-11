@@ -116,26 +116,27 @@ jobs:
   release:
     uses: RoleModel/actions/.github/workflows/release.yml@v3
     with:
-      bump: ${{ inputs.bump }}
+      bump-type: ${{ inputs.bump }}
       changelog: ${{ inputs.changelog }}
-      app-client-id: ${{ vars.RMS_VERSION_MANAGER_CLIENT_ID }}
       publish-gem: true
-    secrets:
-      app-private-key: ${{ secrets.RMS_VERSION_MANAGER_CERT }}
+    secrets: inherit
 ```
 
 ### Inputs
 
-- `app-client-id`*: Client ID of the GitHub App that pushes the version commit and tag
-- `bump`: `major`, `minor`, `patch`, or an explicit version (e.g. `2.0.0.rc1`). Default: `minor`
+- `bump-type`: `major`, `minor`, `patch`, or an explicit version (e.g. `2.0.0.rc1`). Default: `minor`
 - `changelog`: Bullets for the changelog entry, separated by `$>` or newlines. Blank drafts the entry from the commits since the last release (see [changelog-entry](#changelog-entry))
+- `changelog-mode`: `off` leaves the changelog untouched, `on` adds an entry, `unreleased` turns the Unreleased heading into the version's. Default: `on`
+- `app-client-id`: Client ID of the GitHub App that pushes the version commit and tag. Default: `vars.RMS_VERSION_MANAGER_CLIENT_ID`
 - `version-file`: File holding the version. Default: the single `lib/*/version.rb`, else `package.json`
 - `publish-gem`: Publish to RubyGems. Default: `false`
 - `publish-npm`: Publish to npm. Default: `false`
 
 ### Secrets
 
-- `app-private-key`*: Private key of the GitHub App
+- `app-private-key`: Private key of the GitHub App. Default: `secrets.RMS_VERSION_MANAGER_CERT`
+
+The defaults are the org's Version Manager App, which must be installed on the repository, with the org secret visible to it. A reusable workflow only sees the secrets it's handed, so the default key needs `secrets: inherit`, which passes the caller's secrets along. A repository with its own App passes both `app-client-id` and `app-private-key` instead.
 
 ### Trusted publishers
 
@@ -166,6 +167,7 @@ Adds `## [v1.5.0] Oct 9, 2026` and its bullets above the newest entry, plus a `[
 
 Inputs:
 - `version`*: The version being released
+- `mode`: `off`, `on`, or `unreleased` (see the release workflow's `changelog-mode`). Default: `on`
 - `description`: Bullets, separated by `$>` or newlines. Default: drafted from commits
 - `previous-version`: The version released before this one, whose tag starts the drafted commits. Check out with `fetch-depth: 0` so the history is there
 - `changelog-file`: Default: `CHANGELOG.md`
