@@ -29,7 +29,7 @@ class VersionBumper < Thor::Group
   end
 
   def bump_version
-    file_paths.each { |path| File.write path, bumped_content(path) }
+    file_paths.each { |path| package_json?(path) ? npm_version : bump_constant(path) }
   end
 
   def report_new_version
@@ -69,10 +69,12 @@ class VersionBumper < Thor::Group
     File.read(path)[VERSION_PATTERN, :version]
   end
 
-  def bumped_content(path)
-    return "#{JSON.pretty_generate(JSON.parse(File.read(path)).merge('version' => new_version_string))}\n" if package_json?(path)
+  def bump_constant(path)
+    File.write path, File.read(path).sub(VERSION_PATTERN, "\\k<assignment>\\k<quote>#{new_version_string}\\k<quote>")
+  end
 
-    File.read(path).sub(VERSION_PATTERN, "\\k<assignment>\\k<quote>#{new_version_string}\\k<quote>")
+  def npm_version
+    system 'npm', 'version', new_version_string, '--no-git-tag-version', '--ignore-scripts', out: File::NULL, exception: true
   end
 
   def package_json?(path) = File.basename(path) == 'package.json'

@@ -85,10 +85,6 @@ jobs:
         if: hashFiles('Gemfile.lock') != ''
         run: bundle install
 
-      - name: Update package-lock.json
-        if: hashFiles('package-lock.json') != ''
-        run: npm install --package-lock-only --ignore-scripts
-
       - uses: RoleModel/actions/changelog-entry@v3
         if: inputs.changelog-file != ''
         with:

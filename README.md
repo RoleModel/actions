@@ -152,7 +152,7 @@ None of them checks out the code or picks a token: the push uses whatever creden
 
 ### bump-version
 
-Bumps a Ruby `VERSION = "x.y.z"` constant or a `package.json` `"version"`, keeping the file's quote style. A gem with a `package.json` beside it gets both bumped, so the gem and its npm package release under one version. A `major`, `minor` or `patch` bump only applies to a plain `MAJOR.MINOR.PATCH` version. From a prerelease such as `2.0.0.beta2`, pass the version you want instead.
+Bumps a Ruby `VERSION = "x.y.z"` constant, keeping its quote style, or a `package.json` `"version"` via `npm version`, which also updates `package-lock.json`. A gem with a `package.json` beside it gets both bumped, so the gem and its npm package release under one version. A `major`, `minor` or `patch` bump only applies to a plain `MAJOR.MINOR.PATCH` version. From a prerelease such as `2.0.0.beta2`, pass the version you want instead.
 
 Inputs:
 - `bump`*: `major`, `minor`, `patch`, or an explicit version (e.g. `2.0.0.rc1`)
