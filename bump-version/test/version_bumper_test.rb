@@ -62,6 +62,14 @@ class VersionBumperTest < Minitest::Test
     assert_includes read('package.json'), %("@hotwired/turbo": "8.0.0")
   end
 
+  def test_bumps_only_the_root_version_of_package_json
+    FileUtils.rm_rf('lib')
+    write 'package.json', %({\n  "config": { "version": "api-v2" },\n  "version": "1.4.2"\n}\n)
+
+    assert_equal '1.5.0', bump
+    assert_equal %({\n  "config": {\n    "version": "api-v2"\n  },\n  "version": "1.5.0"\n}\n), read('package.json')
+  end
+
   def test_falls_back_to_package_json_without_a_gem
     FileUtils.rm_rf('lib')
     write 'package.json', %({ "name": "@rolemodel/turbo-confirm", "version": "2.2.5" })

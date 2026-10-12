@@ -1,9 +1,10 @@
 #!/usr/bin/env ruby
 
+require 'json'
 require 'thor'
 
 class VersionBumper < Thor::Group
-  VERSION_PATTERN = /(?<assignment>\bVERSION\s*=\s*|"version"\s*:\s*)(?<quote>["'])(?<version>[^"']+)\k<quote>/
+  VERSION_PATTERN = /(?<assignment>\bVERSION\s*=\s*)(?<quote>["'])(?<version>[^"']+)\k<quote>/
 
   argument :file_path_glob, type: :string, optional: true, default: 'lib/*/version.rb',
                             desc: 'File holding the official version constant. (package.json supported automatically)'
@@ -28,9 +29,7 @@ class VersionBumper < Thor::Group
   end
 
   def bump_version
-    file_paths.each do |path|
-      File.write path, File.read(path).sub(VERSION_PATTERN, "\\k<assignment>\\k<quote>#{new_version_string}\\k<quote>")
-    end
+    file_paths.each { |path| File.write path, bumped_content(path) }
   end
 
   def report_new_version
@@ -60,9 +59,23 @@ class VersionBumper < Thor::Group
   end
 
   def current_version_string
-    @current_version_string ||= file_paths.map { |path| File.read(path)[VERSION_PATTERN, :version] }.compact.first or
+    @current_version_string ||= file_paths.map { |path| version_in(path) }.compact.first or
       raise Thor::Error, "No VERSION constant or \"version\" key in #{file_paths}"
   end
+
+  def version_in(path)
+    return JSON.parse(File.read(path))['version'] if package_json?(path)
+
+    File.read(path)[VERSION_PATTERN, :version]
+  end
+
+  def bumped_content(path)
+    return "#{JSON.pretty_generate(JSON.parse(File.read(path)).merge('version' => new_version_string))}\n" if package_json?(path)
+
+    File.read(path).sub(VERSION_PATTERN, "\\k<assignment>\\k<quote>#{new_version_string}\\k<quote>")
+  end
+
+  def package_json?(path) = File.basename(path) == 'package.json'
 
   def file_paths
     @file_paths ||= Dir.glob([file_path_glob, 'package.json'])
