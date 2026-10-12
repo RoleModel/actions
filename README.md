@@ -1,6 +1,6 @@
 # RoleModel/actions
 
-Shared Github Actions
+Shared GitHub Actions
 
 ## test-cleanup
 
@@ -25,7 +25,7 @@ the file level, so when running in parallel, the entire suite can never be quick
 
 Inputs:
 
-- `test-output-path`*: Path to the test output file that hold runtimes
+- `test-output-path`*: Path to the test output file that holds runtimes
 - `top-count`: Number of slowest tests to show. Default: 10
 
 Example:
@@ -79,6 +79,130 @@ jobs:
 
       - name: Rebuild staging branch
         uses: RoleModel/actions/staging-auto-merge@v3
+```
+
+## Release (reusable workflow)
+
+`.github/workflows/release.yml` is a `workflow_call` reusable workflow that cuts a release end to end: version bump, changelog entry, version commit and tag, GitHub release, and publishing to RubyGems and/or npm with trusted publishing. Call it from a workflow with two triggers:
+
+- **`workflow_dispatch`** (the Actions tab) runs the `bump` job. It bumps the version, updates `Gemfile.lock` and `package-lock.json` if present, adds a changelog entry if there's a changelog, then commits, tags and pushes with a GitHub App token.
+- **A `v*` tag push** runs the `release` and publish jobs. That tag push comes from the `bump` job, or from someone pushing a tag by hand. A push made with the default `GITHUB_TOKEN` wouldn't trigger the workflow again, which is why the `bump` job uses an App token.
+
+```yaml
+# .github/workflows/release.yml
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump-type:
+        type: choice
+        options: [patch, minor, major]
+        default: minor
+      changelog:
+        description: Changelog bullets (separate with $>). Leave blank to use the Unreleased notes or draft them from the commits.
+        type: string
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'workflow_dispatch' && 'bump' || github.ref }}
+jobs:
+  release:
+    uses: RoleModel/actions/.github/workflows/release.yml@v3
+    with:
+      bump-type: ${{ inputs.bump-type }}
+      changelog: ${{ inputs.changelog }}
+      publish-gem: true
+    secrets: inherit
+```
+
+### Inputs
+
+- `bump-type`: `major`, `minor`, or `patch`. Default: `minor`
+- `changelog`: Bullets for the changelog entry, separated by `$>` or newlines, placed above any Unreleased notes. Blank uses just those notes, or with none, drafts the entry from the commits since the last release (see [changelog-entry](#changelog-entry))
+- `changelog-file`: The changelog to update. Blank, or a file that doesn't exist, skips it. Default: `CHANGELOG.md`
+- `version-file`: File holding the version. Default: the single `lib/*/version.rb`, else `package.json`
+- `app-client-id`: Client ID of the GitHub App that pushes the version commit and tag. Default: `vars.RMS_VERSION_MANAGER_CLIENT_ID`
+- `publish-gem`: Publish to RubyGems. Default: `false`
+- `publish-npm`: Publish to npm. Default: `false`
+
+### Secrets
+
+- `app-private-key`: Private key of the GitHub App. Default: `secrets.RMS_VERSION_MANAGER_CERT`
+
+The defaults are the org's Version Manager App, which must be installed on the repository, with the org secret visible to it. A reusable workflow only sees the secrets it's handed, so the default key needs `secrets: inherit`, which passes the caller's secrets along. A repository with its own App passes both `app-client-id` and `app-private-key` instead.
+
+### Trusted publishers
+
+Neither registry checks its trusted publisher configuration when you save it, so a mistake shows up as a failed publish job. Fix the configuration and re-run that job; the tag and GitHub release are already in place.
+
+- **RubyGems**: repository = the gem's repository, workflow filename = `release.yml`, **Workflow Repository Owner** = `RoleModel`, **Workflow Repository Name** = `actions`. RubyGems checks the reusable workflow that actually publishes.
+- **npm**: repository = the package's repository, workflow filename = **the calling workflow's file** in that repository. npm checks the caller. The job installs Node 24, since trusted publishing needs npm 11.5.1 or later.
+
+## bump-version, changelog-entry & push-version-tag
+
+The composite actions behind the release workflow, for a repository that needs its own steps in the version commit (the release workflow covers lockfiles and `package.json`). `bump-version` rewrites the version in a file and outputs it. `changelog-entry` records the release in the changelog. `push-version-tag` commits every tracked change as that version, tags it, and pushes the commit and tag atomically, so a rejected branch push never leaves a published tag behind. Anything else that belongs in the version commit (another app's lockfile, generated docs) goes in steps between them.
+
+None of them checks out the code or picks a token: the push uses whatever credentials `actions/checkout` persisted. Pushes made with the default `GITHUB_TOKEN` do not trigger other workflows (e.g. one listening for `v*` tags), so use a GitHub App token or deploy key when something downstream should run.
+
+### bump-version
+
+Bumps a Ruby `VERSION = "x.y.z"` constant, keeping its quote style, or a `package.json` `"version"` via `npm version`, which also updates `package-lock.json`. A gem with a `package.json` beside it gets both bumped, so the gem and its npm package release under one version. A `major`, `minor` or `patch` bump only applies to a plain `MAJOR.MINOR.PATCH` version. From a prerelease such as `2.0.0.beta2`, pass the version you want instead.
+
+Inputs:
+- `bump`*: `major`, `minor`, `patch`, or an explicit version (e.g. `2.0.0.rc1`)
+- `version-file`: File holding the version. Default: the single `lib/*/version.rb`, else `package.json`
+
+Outputs: `version`, `previous-version`
+
+### changelog-entry
+
+Adds `## [v1.5.0] Oct 9, 2026` and its bullets, plus a `[v1.5.0]: <release URL>` link if the changelog keeps reference links. An `## Unreleased` section becomes the entry, keeping its notes beneath any description bullets; otherwise the entry goes above the newest one. With neither a description nor Unreleased notes, it drafts the bullets from the subjects of the commits since the previous release, folding bot commits (Dependabot) into one "Update dependencies" line. With no history to draft from, it writes a placeholder bullet to fill in later, so a release never goes unrecorded.
+
+Inputs:
+- `version`*: The version being released
+- `description`: Bullets, separated by `$>` or newlines, placed above any Unreleased notes. Default: just those notes, else drafted from commits
+- `previous-version`: The version released before this one, whose tag starts the drafted commits. Check out with `fetch-depth: 0` so the history is there
+- `changelog-file`: Skipped if there's no such file. Default: `CHANGELOG.md`
+- `tag-prefix`: Default: `v`
+
+### push-version-tag
+
+Inputs:
+- `version`*: The version being released
+- `tag-prefix`: Default: `v`
+- `branch`: Branch to push the version commit to. Default: `${{ github.ref_name }}`
+- `git-user-name` / `git-user-email`: Commit and tag author. Default: the `github-actions[bot]` user
+
+Example (an extra lockfile in the version commit):
+
+```yaml
+steps:
+  # ... app token, checkout with fetch-depth: 0, setup-ruby
+
+  - uses: RoleModel/actions/bump-version@v3
+    id: bump
+    with:
+      bump: ${{ inputs.bump }}
+
+  - run: bundle install && (cd example_app && bundle lock)
+
+  - uses: RoleModel/actions/changelog-entry@v3
+    with:
+      version: ${{ steps.bump.outputs.version }}
+      previous-version: ${{ steps.bump.outputs.previous-version }}
+      description: ${{ inputs.changelog }}
+
+  - uses: RoleModel/actions/push-version-tag@v3
+    with:
+      version: ${{ steps.bump.outputs.version }}
+      git-user-name: ${{ steps.app-token.outputs.app-slug }}[bot]
+      git-user-email: ${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com
 ```
 
 ## Rails CI (reusable workflow)
@@ -150,7 +274,7 @@ jobs:
 
 This is a combination of multiple composite actions that can be used to run your entire CI flow for a rails app using parallel_tests. Each action allow you to customize the machine, environment variables, and any custom install steps that are needed. It does require you to check out the code yourself, since some install steps might happen after that.
 
-### Inputs, by composit action name
+### Inputs, by composite action name
 
 - `linting-and-non-system-tests`:
   - `linting_step_required`
@@ -266,11 +390,11 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Capture Project Stats
-        uses: RoleModel/actions/project-stats
+        uses: RoleModel/actions/project-stats@v3
 ```
 
 ## Versioning
 
 This is using [anothrNick/github-tag-action](https://github.com/anothrNick/github-tag-action/tree/master) to automatically
-post version tags when a commit is merged to master. Unless you include `#patch` or `#major` in your commit message,
+post version tags when a commit is merged to main. Unless you include `#patch` or `#major` in your commit message,
 it will automatically create a new tag a minor version higher. `#none` will skip tagging altogether.
