@@ -1,6 +1,6 @@
 # RoleModel/actions
 
-## Unreleased
+## [v3.13.1] Oct 12, 2026
 
 - Set up the parallel test databases with `parallel:load_schema` alone in `rails-ci.yml` and both composite actions. Its `db:purge` already drops and creates each database, so the `parallel:create` pass only added a second round of Rails boots. Setting up 16 databases locally went from about 11.5s to 5.7s.
 
