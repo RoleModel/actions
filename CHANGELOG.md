@@ -1,5 +1,9 @@
 # RoleModel/actions
 
+## [v3.13.1] Oct 12, 2026
+
+- Set up the parallel test databases with `parallel:load_schema` alone in `rails-ci.yml` and both composite actions. Its `db:purge` already drops and creates each database, so the `parallel:create` pass only added a second round of Rails boots. Setting up 16 databases locally went from about 11.5s to 5.7s.
+
 ## [v3.13.0] Oct 9, 2026
 
 - Add a `release.yml` reusable workflow that cuts a release end to end. A `workflow_dispatch` run bumps the version, updates lockfiles, adds a changelog entry, and pushes the version commit and tag with a GitHub App token. The tag push (or one made by hand) creates the GitHub release and publishes to RubyGems and/or npm with trusted publishing. (#34)

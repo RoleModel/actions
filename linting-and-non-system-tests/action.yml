@@ -57,7 +57,7 @@ runs:
 
     - name: Setup Parallel Databases
       shell: bash
-      run: bundle exec rake parallel:create parallel:load_schema
+      run: bundle exec rake parallel:load_schema
 
     - name: Linting
       if: ${{ inputs.linting_step_required == 'true' }}

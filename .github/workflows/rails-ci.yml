@@ -234,7 +234,7 @@ jobs:
         background: true
 
       - name: Setup Parallel Databases
-        run: bundle exec rake parallel:create parallel:load_schema
+        run: bundle exec rake parallel:load_schema
         background: true
 
       # Yarn-only work can start as soon as node_modules are ready.
