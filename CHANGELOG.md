@@ -1,5 +1,9 @@
 # RoleModel/actions
 
+## [v3.13.2] Oct 20, 2026
+
+- `staging-auto-merge` now pages through every open pull request, repository label, and closed `Staging`-labeled pull request. It read only the first page of each (30 items), and open pull requests are listed oldest first, so in a repository with more than 30 open the newest labeled ones were silently left off `staging`. Closed-PR label cleanup now asks for only the `Staging`-labeled ones instead of the 30 most recently closed.
+
 ## [v3.13.1] Oct 12, 2026
 
 - Set up the parallel test databases with `parallel:load_schema` alone in `rails-ci.yml` and both composite actions. Its `db:purge` already drops and creates each database, so the `parallel:create` pass only added a second round of Rails boots. Setting up 16 databases locally went from about 11.5s to 5.7s.

@@ -23246,13 +23246,14 @@ class StagingAutoMerge {
     this.logger.info("Label Name: ", this.stagingLabelName);
   }
   async mergeStagedPullRequests() {
-    const pullRequests = await this.octokit.rest.pulls.list({
+    const pullRequests = await this.octokit.paginate(this.octokit.rest.pulls.list, {
       ...this.repo,
       state: "open",
       sort: "created",
-      direction: "asc"
+      direction: "asc",
+      per_page: 100
     });
-    for (const pr of pullRequests.data) {
+    for (const pr of pullRequests) {
       if (this.hasStagingLabel(pr.labels)) {
         await this.mergePullRequest(pr);
       }
@@ -23290,14 +23291,14 @@ class StagingAutoMerge {
     await this.exec("git push --force");
   }
   async cleanupClosedPullRequests() {
-    const closedPullRequests = await this.octokit.rest.pulls.list({
+    const closedPullRequests = await this.octokit.paginate(this.octokit.rest.issues.listForRepo, {
       ...this.repo,
       state: "closed",
-      sort: "created",
-      direction: "desc"
+      labels: this.stagingLabelName,
+      per_page: 100
     });
-    for (const closedPr of closedPullRequests.data) {
-      if (this.hasStagingLabel(closedPr.labels)) {
+    for (const closedPr of closedPullRequests) {
+      if (closedPr.pull_request) {
         this.logger.info("removing label from: ", closedPr.title);
         await this.removeStagingLabel(closedPr.number);
       }
@@ -23330,11 +23331,12 @@ Merge Command Error: ${consoleErrorMessage}`;
     return labels.some((label) => label.name.toLowerCase() === this.stagingLabelName.toLowerCase());
   }
   async findStagingLabelName() {
-    const repoLabels = await this.octokit.rest.issues.listLabelsForRepo({
+    const repoLabels = await this.octokit.paginate(this.octokit.rest.issues.listLabelsForRepo, {
       owner: this.repo.owner,
-      repo: this.repo.repo
+      repo: this.repo.repo,
+      per_page: 100
     });
-    return repoLabels.data.find((label) => label.name.toLowerCase() === "staging")?.name;
+    return repoLabels.find((label) => label.name.toLowerCase() === "staging")?.name;
   }
   async removeStagingLabel(issueNumber) {
     if (!this.stagingLabelName) return;
