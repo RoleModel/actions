@@ -25,16 +25,30 @@ class ChangelogEntry
     bullets.empty? ? [PLACEHOLDER] : bullets
   end
 
+  # The text under `heading` (at any level) in a pull request's description, up to the next heading as high or
+  # higher, kept whole like the Unreleased notes.
+  def self.from_pull_request(body, heading)
+    return [] if heading.to_s.strip.empty?
+
+    lines = body.to_s.gsub("\r\n", "\n").lines
+    start = lines.index { _1.match?(/^#+\s+#{Regexp.escape(heading.strip)}\s*$/i) }
+    return [] unless start
+
+    level = lines[start][/^#+/].size
+    notes = lines.drop(start + 1).take_while { !_1.match?(/^\#{1,#{level}}\s/) }.join.strip
+    notes.empty? ? [] : [notes]
+  end
+
   attr_reader :source
 
   def initialize(source)
     @source = source
   end
 
-  # The description's bullets, then any notes already under Unreleased. With neither, they're drafted
-  # from the commits since the previous release.
-  def bullets(description:, previous_tag:)
-    bullets = self.class.from_description(description) + unreleased_notes
+  # The description's bullets, then the pull request's notes, then any notes already under Unreleased. With
+  # none, they're drafted from the commits since the previous release.
+  def bullets(description:, previous_tag:, pull_request_notes: [])
+    bullets = self.class.from_description(description) + pull_request_notes + unreleased_notes
     bullets.empty? ? self.class.from_commits_since(previous_tag) : bullets
   end
 
@@ -69,7 +83,9 @@ if __FILE__ == $PROGRAM_NAME
   prefix = ENV.fetch('TAG_PREFIX', 'v')
   tag = "#{prefix}#{ARGV.fetch(0)}"
   changelog = ChangelogEntry.new(File.read(path))
-  bullets = changelog.bullets(description: ENV.fetch('DESCRIPTION', ''), previous_tag: "#{prefix}#{ENV.fetch('PREVIOUS_VERSION', '')}")
+  pull_request_notes = ChangelogEntry.from_pull_request(ENV.fetch('PULL_REQUEST_BODY', ''), ENV.fetch('PULL_REQUEST_SECTION', ''))
+  bullets = changelog.bullets(description: ENV.fetch('DESCRIPTION', ''), previous_tag: "#{prefix}#{ENV.fetch('PREVIOUS_VERSION', '')}",
+                              pull_request_notes:)
 
   url = "#{ENV.fetch('GITHUB_SERVER_URL', 'https://github.com')}/#{ENV.fetch('GITHUB_REPOSITORY', '')}/releases/tag/#{tag}"
   File.write(path, changelog.with_entry(tag:, bullets:, date: Time.now.utc.strftime('%b %-d, %Y'), url:))

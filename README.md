@@ -170,6 +170,8 @@ Inputs:
 - `previous-version`: The version released before this one, whose tag starts the drafted commits. Check out with `fetch-depth: 0` so the history is there
 - `changelog-file`: Skipped if there's no such file. Default: `CHANGELOG.md`
 - `tag-prefix`: Default: `v`
+- `pull-request-section`: Heading of a section in the description of the pull request merged as this commit (e.g. `Changelog`), taken verbatim below the description's bullets and above any Unreleased notes. Lets a repository that releases on every merge keep changelog notes out of pull request diffs, so concurrent pull requests never collide in the changelog. Default: blank, which skips the lookup
+- `github-token`: Reads that pull request. Default: `github.token`
 
 ### push-version-tag
 
