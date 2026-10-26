@@ -1,5 +1,9 @@
 # RoleModel/actions
 
+## [v3.13.3] Oct 26, 2026
+
+- `staging-auto-merge` closed-PR label cleanup works again with only `contents: write` and `pull-requests: write`. v3.13.2 looked the PRs up through the issues API, which needs `issues: read`, so callers granting the documented permissions failed with `Resource not accessible by integration`. Cleanup now reads the 100 most recently updated closed pull requests, which always includes the one that just closed.
+
 ## [v3.13.2] Oct 20, 2026
 
 - `staging-auto-merge` now pages through every open pull request, repository label, and closed `Staging`-labeled pull request. It read only the first page of each (30 items), and open pull requests are listed oldest first, so in a repository with more than 30 open the newest labeled ones were silently left off `staging`. Closed-PR label cleanup now asks for only the `Staging`-labeled ones instead of the 30 most recently closed.
