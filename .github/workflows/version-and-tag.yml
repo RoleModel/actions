@@ -4,23 +4,44 @@ on:
     branches:
       - main
 
+concurrency: version-and-tag
+
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: read
     steps:
     - uses: actions/checkout@v7
       with:
+        ref: ${{ github.ref }}
         fetch-depth: '0'
 
-    - name: Bump version and push tag
+    - name: Compute next version
       id: bump-version
       uses: anothrNick/github-tag-action@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         WITH_V: true
         FORCE_WITHOUT_CHANGES: true
+        DRY_RUN: true
+
+    - name: Add changelog entry
+      if: steps.bump-version.outputs.new_tag != steps.bump-version.outputs.old_tag
+      uses: ./changelog-entry
+      with:
+        version: ${{ steps.bump-version.outputs.new_tag }}
+        previous-version: ${{ steps.bump-version.outputs.old_tag }}
+        tag-prefix: ''
+        pull-request-section: Changelog
+
+    - name: Commit, tag, and push
+      if: steps.bump-version.outputs.new_tag != steps.bump-version.outputs.old_tag
+      uses: ./push-version-tag
+      with:
+        version: ${{ steps.bump-version.outputs.new_tag }}
+        tag-prefix: ''
 
     - name: Extract major tag
       id: extract-major
