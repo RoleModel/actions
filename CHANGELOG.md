@@ -1,5 +1,9 @@
 # RoleModel/actions
 
+## [v3.13.3] Oct 26, 2026
+
+- `rails-ci.yml` installs `apt_packages` with `NEEDRESTART_MODE=l`, so needrestart lists the services it would restart instead of restarting them. It restarted `systemd-resolved` and `systemd-networkd`, and a background step that made a network call at that moment failed with `lookup api.github.com ... connection refused` (the Brakeman step's reviewdog check run was the usual one). In a systemd container, 10 package reinstalls restarted the resolver every time and failed 9 lookups; with the change, none.
+
 ## [v3.13.2] Oct 20, 2026
 
 - `staging-auto-merge` now pages through every open pull request, repository label, and closed `Staging`-labeled pull request. It read only the first page of each (30 items), and open pull requests are listed oldest first, so in a repository with more than 30 open the newest labeled ones were silently left off `staging`. Closed-PR label cleanup now asks for only the `Staging`-labeled ones instead of the 30 most recently closed.
