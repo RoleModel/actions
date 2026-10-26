@@ -1,5 +1,9 @@
 # RoleModel/actions
 
+## [v3.14.0] Oct 26, 2026
+
+- `changelog-entry` can take its notes from a section of the merged pull request's description, through the new opt-in `pull-request-section` input. A repository that releases on every merge can keep changelog notes out of pull request diffs, so two open pull requests no longer collide on the changelog or guess the same version. Callers that leave it blank are unaffected.
+
 ## [v3.13.2] Oct 20, 2026
 
 - `staging-auto-merge` now pages through every open pull request, repository label, and closed `Staging`-labeled pull request. It read only the first page of each (30 items), and open pull requests are listed oldest first, so in a repository with more than 30 open the newest labeled ones were silently left off `staging`. Closed-PR label cleanup now asks for only the `Staging`-labeled ones instead of the 30 most recently closed.

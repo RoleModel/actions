@@ -33,6 +33,18 @@ inputs:
     required: false
     default: v
 
+  pull-request-section:
+    description: >
+      Heading of a section in the description of the pull request merged as this commit (e.g. `Changelog`).
+      Its text goes below the description's bullets and above any Unreleased notes. Blank skips the lookup.
+    required: false
+    default: ''
+
+  github-token:
+    description: Token that reads the pull request for `pull-request-section`.
+    required: false
+    default: ${{ github.token }}
+
 runs:
   using: composite
   steps:
@@ -44,4 +56,11 @@ runs:
         PREVIOUS_VERSION: ${{ inputs.previous-version }}
         CHANGELOG_FILE: ${{ inputs.changelog-file }}
         TAG_PREFIX: ${{ inputs.tag-prefix }}
-      run: ruby "$GITHUB_ACTION_PATH/changelog_entry.rb" "$VERSION"
+        PULL_REQUEST_SECTION: ${{ inputs.pull-request-section }}
+        GH_TOKEN: ${{ inputs.github-token }}
+      run: |
+        if [ -n "$PULL_REQUEST_SECTION" ]; then
+          PULL_REQUEST_BODY="$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq '.[0].body // ""')"
+          export PULL_REQUEST_BODY
+        fi
+        ruby "$GITHUB_ACTION_PATH/changelog_entry.rb" "$VERSION"

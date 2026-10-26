@@ -99,6 +99,26 @@ class ChangelogEntryTest < Minitest::Test
                                       date: 'Oct 10, 2026', url: 'x')
   end
 
+  def test_reads_a_section_of_a_pull_request_description
+    body = "## Problem\r\n\r\nIt broke.\r\n\r\n## Changelog\r\n\r\n- Fixed it,\r\n  across two lines\r\n\r\n### Detail\r\n\r\nKept\r\n\r\n## Verification\r\n\r\nTests\r\n"
+
+    assert_equal ["- Fixed it,\n  across two lines\n\n### Detail\n\nKept"], ChangelogEntry.from_pull_request(body, 'changelog')
+  end
+
+  def test_reads_nothing_without_the_section_or_a_heading
+    assert_empty ChangelogEntry.from_pull_request("## Problem\n\nIt broke.\n", 'Changelog')
+    assert_empty ChangelogEntry.from_pull_request("## Changelog\n\n## Next\n", 'Changelog')
+    assert_empty ChangelogEntry.from_pull_request("## Changelog\n\n- Fixed it\n", '')
+    assert_empty ChangelogEntry.from_pull_request(nil, 'Changelog')
+  end
+
+  def test_places_pull_request_notes_between_the_description_and_unreleased_notes
+    changelog = ChangelogEntry.new("# Changelog\n\n## Unreleased\n\n- Work in progress\n")
+
+    assert_equal ['- Hover trigger', '- Fixed it', '- Work in progress'],
+                 changelog.bullets(description: 'Hover trigger', previous_tag: 'v1.0.0', pull_request_notes: ['- Fixed it'])
+  end
+
   def test_drafts_bullets_for_an_empty_unreleased_section
     in_repo do
       commit 'Before the release'
