@@ -191,9 +191,7 @@ jobs:
         with:
           path: tmp/turbo_rspec_runtime.log
           key: parallel-spec-runtimes-${{ github.head_ref || github.ref_name }}-${{ github.sha }}
-          restore-keys: |
-            parallel-spec-runtimes-${{ github.head_ref || github.ref_name }}-
-            parallel-spec-runtimes-
+          restore-keys: parallel-spec-runtimes-${{ github.event.repository.default_branch }}-
         background: true
 
       # Gem-only work can start as soon as gems are ready, instead of waiting
