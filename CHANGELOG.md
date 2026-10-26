@@ -1,5 +1,9 @@
 # RoleModel/actions
 
+## [v3.13.4] Oct 26, 2026
+
+- `rails-ci` balances parallel spec groups using the default branch's latest runtimes. It used to prefer the branch's own last run, however old, so a long-lived or rebased branch was split using months-old timings and a couple of groups ran a minute past the rest.
+
 ## [v3.13.2] Oct 20, 2026
 
 - `staging-auto-merge` now pages through every open pull request, repository label, and closed `Staging`-labeled pull request. It read only the first page of each (30 items), and open pull requests are listed oldest first, so in a repository with more than 30 open the newest labeled ones were silently left off `staging`. Closed-PR label cleanup now asks for only the `Staging`-labeled ones instead of the 30 most recently closed.
