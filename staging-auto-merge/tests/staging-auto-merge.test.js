@@ -17,7 +17,6 @@ const createOctokit = () => ({
   rest: {
     issues: {
       listLabelsForRepo: vi.fn(),
-      listForRepo: vi.fn(),
       removeLabel: vi.fn(),
       createComment: vi.fn(),
     },
@@ -39,7 +38,6 @@ describe('StagingAutoMerge', () => {
     repo = { owner: 'rolemodel', repo: 'actions' }
     primaryBranch = 'main'
     octokit.rest.issues.listLabelsForRepo.mockImplementation(pagesOf([{ name: 'Staging' }]))
-    octokit.rest.issues.listForRepo.mockImplementation(pagesOf([]))
   })
 
   describe('run', () => {
@@ -52,13 +50,14 @@ describe('StagingAutoMerge', () => {
           head: { ref: 'feature-branch' },
         },
       ]
-      const closedLabeled = [
-        { title: 'Old feature', number: 99, pull_request: {} },
-        { title: 'Closed issue', number: 98 },
+      const closedPulls = [
+        { title: 'Old feature', number: 99, labels: [{ name: 'Staging' }] },
+        { title: 'Unstaged feature', number: 98, labels: [] },
       ]
 
-      octokit.rest.pulls.list.mockImplementation(pagesOf(openPulls))
-      octokit.rest.issues.listForRepo.mockImplementation(pagesOf(closedLabeled))
+      octokit.rest.pulls.list.mockImplementation((params) =>
+        pagesOf(params.state === 'closed' ? closedPulls : openPulls)(params),
+      )
 
       const stagingAutoMerge = new StagingAutoMerge(octokit, primaryBranch, repo, logger)
       const execMock = vi.fn().mockResolvedValue(undefined)
@@ -73,8 +72,8 @@ describe('StagingAutoMerge', () => {
       )
       expect(execMock).toHaveBeenCalledWith('git', ['commit', '-m', 'Add feature'])
       expect(octokit.rest.issues.createComment).not.toHaveBeenCalled()
-      expect(octokit.rest.issues.listForRepo).toHaveBeenCalledWith(
-        expect.objectContaining({ state: 'closed', labels: 'Staging' }),
+      expect(octokit.rest.pulls.list).toHaveBeenCalledWith(
+        expect.objectContaining({ state: 'closed', sort: 'updated', direction: 'desc' }),
       )
       expect(octokit.rest.issues.removeLabel).toHaveBeenCalledTimes(1)
       expect(octokit.rest.issues.removeLabel).toHaveBeenCalledWith({

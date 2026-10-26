@@ -96,15 +96,16 @@ export default class StagingAutoMerge {
   }
 
   async cleanupClosedPullRequests() {
-    const closedPullRequests = await this.octokit.paginate(this.octokit.rest.issues.listForRepo, {
+    const { data: closedPullRequests } = await this.octokit.rest.pulls.list({
       ...this.repo,
       state: 'closed',
-      labels: this.stagingLabelName,
+      sort: 'updated',
+      direction: 'desc',
       per_page: 100,
     })
 
     for (const closedPr of closedPullRequests) {
-      if (closedPr.pull_request) {
+      if (this.hasStagingLabel(closedPr.labels)) {
         this.logger.info('removing label from: ', closedPr.title)
         await this.removeStagingLabel(closedPr.number)
       }
