@@ -303,7 +303,7 @@ jobs:
               detailed_summary: true
 
           - name: Analyze Test Runtimes
-            uses: RoleModel/actions/test-runtime-analyzer@v1
+            uses: RoleModel/actions/test-runtime-analyzer@v3
             with:
               test-output-path: tmp/turbo_rspec_runtime.log
 
@@ -320,7 +320,7 @@ jobs:
           # of appearing mid-install.
           - name: Publish Project Stats Check
             if: ${{ inputs.project-stats }}
-            uses: actions/github-script@v7
+            uses: actions/github-script@v9
             env:
               STATS_TABLE: ${{ steps.project-stats.outputs.table }}
             with:
@@ -339,6 +339,6 @@ jobs:
                 })
 
       - name: Cleanup
-        uses: RoleModel/actions/test-cleanup@v1
+        uses: RoleModel/actions/test-cleanup@v3
         with:
           artifact-prefix: rspec
