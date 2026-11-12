@@ -77,11 +77,11 @@ runs:
         detailed_summary: true
 
     - name: Analyze Test Runtimes
-      uses: RoleModel/actions/test-runtime-analyzer@v1
+      uses: RoleModel/actions/test-runtime-analyzer@v3
       with:
         test-output-path: tmp/turbo_rspec_runtime.log
 
     - name: Cleanup
-      uses: RoleModel/actions/test-cleanup@v1
+      uses: RoleModel/actions/test-cleanup@v3
       with:
         artifact-prefix: rspec

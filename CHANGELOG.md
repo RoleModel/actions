@@ -1,5 +1,10 @@
 # RoleModel/actions
 
+## [v3.13.4] Nov 12, 2026
+
+- `rails-ci.yml`, `linting-and-non-system-tests` and `system-tests` call `test-cleanup` and `test-runtime-analyzer` at `@v3` instead of `@v1`. The `v1` tag of `test-cleanup` still used `actions/upload-artifact@v4`, which targets Node 20 and printed GitHub's Node 20 deprecation warning plus Node's `punycode` and `url.parse()` warnings on every run. Both actions take the same inputs at `v3`.
+- `rails-ci.yml` publishes the Project Stats check with `actions/github-script@v9` instead of `@v7`, which also targeted Node 20.
+
 ## [v3.13.3] Oct 26, 2026
 
 - `rails-ci.yml` installs `apt_packages` with `NEEDRESTART_MODE=l`, so needrestart lists the services it would restart instead of restarting them. It restarted `systemd-resolved` and `systemd-networkd`, and a background step that made a network call at that moment failed with `lookup api.github.com ... connection refused` (the Brakeman step's reviewdog check run was the usual one). In a systemd container, 10 package reinstalls restarted the resolver every time and failed 9 lookups; with the change, none.
